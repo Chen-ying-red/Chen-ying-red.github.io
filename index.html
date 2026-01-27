@@ -159,8 +159,9 @@
             <div id="timerDisplay" class="timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-idle select-none">
                 0.00
             </div>
-            <div class="mt-4 text-neutral-600 text-[10px] md:text-xs uppercase tracking-tighter md:tracking-normal">
-                长按屏幕准备 / 松开开始
+            <div class="mt-4 text-neutral-600 text-[10px] md:text-xs uppercase tracking-tighter md:tracking-normal text-center">
+                <div>按住 [空格键] 或 [长按屏幕] 准备</div>
+                <div class="mt-1">松开开始 / 再次点击停止</div>
             </div>
         </div>
 
@@ -190,7 +191,7 @@
     <div class="bg-neutral-900 border-t border-neutral-800 h-40 md:h-64 flex flex-col">
         <div class="px-4 py-1.5 bg-neutral-800 flex justify-between items-center">
             <span class="text-[10px] md:text-xs font-bold text-neutral-400 uppercase">历史记录</span>
-            <span class="text-[10px] text-neutral-600">最近 20 条</span>
+            <span class="text-[10px] text-neutral-600">最近 20 条记录</span>
         </div>
         <div id="historyList" class="flex-1 overflow-y-auto p-2 grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2"></div>
     </div>
@@ -252,7 +253,7 @@
                         state = 'READY';
                         timerDisplay.className = 'timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-ready';
                     }
-                }, 400); // 移动端略微增加确认感
+                }, 400); // 确认感延迟
             }
         }
 
@@ -286,7 +287,7 @@
 
         function calculateAoN(n) {
             if (solves.length < n) return '--';
-            const recent = solves.slice(0, n).map( => .time).sort((a,b) => a-b);
+            const recent = solves.slice(0, n).map(s => s.time).sort((a,b) => a-b);
             let sum = 0;
             for(let i=1; i<n-1; i++) sum += recent[i];
             return formatTime(sum / (n-2));
@@ -296,16 +297,16 @@
             const list = document.getElementById('historyList');
             if(!list) return;
             list.innerHTML = '';
-            solves.slice(0, 20).forEach((, idx) => {
+            solves.slice(0, 20).forEach((s, idx) => {
                 const div = document.createElement('div');
                 div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-xs";
-                div.innerHTML = `<span class="text-neutral-500 mr-2">${solves.length - idx}.</span><span class="font-bold text-white">${formatTime(.time)}</span><span class="text-[9px] text-neutral-500 truncate ml-2 flex-1 text-right">${.scramble}</span>`;
+                div.innerHTML = `<span class="text-neutral-500 mr-2">${solves.length - idx}.</span><span class="font-bold text-white">${formatTime(s.time)}</span><span class="text-[9px] text-neutral-500 truncate ml-2 flex-1 text-right">${s.scramble}</span>`;
                 list.appendChild(div);
             });
         }
 
         function clearHistory() {
-            if(confirm('清空记录？')) {
+            if(confirm('清空所有记录？')) {
                 solves = [];
                 localStorage.removeItem('cubeSolves');
                 renderHistory();
@@ -314,21 +315,26 @@
         }
 
         // --- Events ---
+        // 电脑端键盘逻辑
         document.addEventListener('keydown', (e) => { 
             if(e.code === 'Space') { 
                 e.preventDefault(); 
-                if(!e.repeat) handleInputDown(); 
+                if(!e.repeat) handleInputDown(); // 只有第一次按下触发，防止长按连发
             } 
         });
         document.addEventListener('keyup', (e) => { 
-            if(e.code === 'Space') handleInputUp(); 
+            if(e.code === 'Space') {
+                e.preventDefault();
+                handleInputUp(); 
+            }
         });
         
         document.addEventListener('DOMContentLoaded', () => {
             const touchArea = document.getElementById('touchArea');
             
-            // 改进移动端触控逻辑
+            // 移动端触控逻辑
             touchArea.addEventListener('touchstart', (e) => { 
+                // 如果点击的不是按钮或打乱显示区，则触发计时逻辑
                 if(!e.target.closest('button') && !e.target.closest('#scrambleDisplay')) { 
                     e.preventDefault(); 
                     handleInputDown(); 
@@ -336,15 +342,18 @@
             }, {passive: false});
             
             touchArea.addEventListener('touchend', (e) => { 
-                if(!e.target.closest('button')) handleInputUp(); 
-            });
+                if(!e.target.closest('button')) {
+                    e.preventDefault();
+                    handleInputUp(); 
+                }
+            }, {passive: false});
 
             const data = localStorage.getItem('cubeSolves');
             if(data) solves = JSON.parse(data);
             renderHistory();
             updateStats();
             
-            // Generate PWA Manifest
+            // PWA Manifest
             const manifest = {
                 "name": "极速魔方计时器",
                 "short_name": "CubeTimer",
@@ -357,6 +366,23 @@
             const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
             document.querySelector('#manifest-placeholder').setAttribute('href', 网站.createObjectURL(blob));
         });
+
+        // 安装 PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('installBtn');
+            if(btn) btn.classList.remove('hidden');
+        });
+
+        async function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+                document.getElementById('installBtn').classList.add('hidden');
+            }
+        }
     </script>
 </body>
 </html>
