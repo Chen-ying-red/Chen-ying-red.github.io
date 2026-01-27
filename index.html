@@ -3,7 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA Theme Color -->
+    <meta name="theme-color" content="#171717">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <title>极速魔方计时器 | SpeedCube Timer</title>
+
+    <!-- Web App Manifest (Data URI for Single File Support) -->
+    <!-- This allows the app to be installed on Android and PC -->
+    <link rel="manifest" id="manifest-placeholder">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -19,6 +29,7 @@
             overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
             user-select: none; /* Prevent text selection while tapping */
             -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .timer-font {
@@ -26,13 +37,12 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Scramble text style */
         .scramble-text {
             letter-spacing: 2px;
             line-height: 1.6;
+            min-height: 3.2rem; /* Reserve space to prevent layout shift */
         }
 
-        /* Hide scrollbar for history list but allow scrolling */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -41,27 +51,39 @@
             scrollbar-width: none;
         }
 
-        /* Mobile tap area highlight */
         .touch-active {
             background-color: rgba(255, 255, 255, 0.05);
         }
 
-        /* Timer states colors */
         .timer-idle { color: #e5e5e5; }
         .timer-holding { color: #ef4444; } /* Red */
         .timer-ready { color: #22c55e; }   /* Green */
         .timer-running { color: #e5e5e5; }
+
+        /* Install Button Animation */
+        @keyframes pulse-blue {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        }
+        .btn-install {
+            animation: pulse-blue 2s infinite;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- Navbar / Header -->
-    <header class="flex justify-between items-center px-6 py-4 bg-neutral-900 border-b border-neutral-800">
+    <header class="flex justify-between items-center px-6 py-4 bg-neutral-900 border-b border-neutral-800 safe-area-top">
         <div class="flex items-center gap-2">
             <i class="fas fa-cube text-blue-500 text-xl"></i>
             <h1 class="text-xl font-bold tracking-wide">CubeTimer</h1>
         </div>
-        <div class="flex gap-4">
+        <div class="flex gap-4 items-center">
+            <!-- Install Button (Hidden by default) -->
+            <button id="installBtn" onclick="installApp()" class="hidden bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded-full transition items-center gap-2 btn-install">
+                <i class="fas fa-download"></i> 安装应用
+            </button>
+
             <button onclick="clearHistory()" class="text-neutral-400 hover:text-red-400 transition" title="清空所有数据">
                 <i class="fas fa-trash-alt"></i>
             </button>
@@ -78,7 +100,7 @@
         <div class="pt-8 px-4 text-center z-10">
             <div class="text-sm text-neutral-500 mb-2 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
             <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-300 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()" title="点击生成新打乱">
-                Loading...
+                <!-- Initial placeholder is empty to avoid 'Loading...' flash if fast, or stuck if slow -->
             </div>
         </div>
 
@@ -94,7 +116,7 @@
         </div>
 
         <!-- Statistics Strip -->
-        <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-4 z-20">
+        <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-4 z-20 safe-area-bottom">
             <div class="max-w-4xl mx-auto grid grid-cols-4 gap-4 text-center">
                 <div class="flex flex-col">
                     <span class="text-xs text-neutral-500 uppercase">次数</span>
@@ -116,7 +138,7 @@
         </div>
     </main>
 
-    <!-- History Sidebar (Slide-over on mobile, fixed on desktop right if expanded, currently bottom drawer style for simplicity) -->
+    <!-- History Sidebar -->
     <div class="bg-neutral-900 border-t border-neutral-800 h-48 md:h-64 flex flex-col">
         <div class="px-4 py-2 bg-neutral-800 flex justify-between items-center">
             <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider">历史记录</span>
@@ -136,15 +158,15 @@
             <ul class="space-y-3 text-neutral-300 text-sm">
                 <li class="flex items-start gap-2">
                     <i class="fas fa-desktop mt-1 text-blue-400"></i>
-                    <span><b>电脑端：</b>按住空格键直到数字变绿，松开开始计时。再次按下空格停止。</span>
+                    <span><b>电脑端：</b>按住空格键直到数字变绿，松开开始计时。</span>
                 </li>
                 <li class="flex items-start gap-2">
                     <i class="fas fa-mobile-alt mt-1 text-green-400"></i>
-                    <span><b>手机端：</b>手指按住计时区域直到变绿，松开开始。再次轻触屏幕停止。</span>
+                    <span><b>手机端：</b>手指按住计时区域直到变绿，松开开始。</span>
                 </li>
                 <li class="flex items-start gap-2">
-                    <i class="fas fa-calculator mt-1 text-yellow-400"></i>
-                    <span><b>统计：</b>自动计算Ao5（去头尾平均）和Ao12。</span>
+                    <i class="fas fa-download mt-1 text-purple-400"></i>
+                    <span><b>安装：</b>点击右上角“安装应用”或浏览器菜单的“添加到主屏幕”，可离线全屏使用。</span>
                 </li>
             </ul>
             <button onclick="toggleHelp()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition">明白了</button>
@@ -152,6 +174,65 @@
     </div>
 
     <script>
+        // --- PWA & Manifest Generation ---
+        function initPWA() {
+            try {
+                // Generate Manifest dynamically to keep single file structure
+                const manifest = {
+                    "name": "极速魔方计时器",
+                    "short_name": "CubeTimer",
+                    "start_url": ".",
+                    "display": "standalone",
+                    "background_color": "#1a1a1a",
+                    "theme_color": "#171717",
+                    "orientation": "portrait",
+                    "icons": [
+                        {
+                            "src": "https://cdn-icons-png.flaticon.com/512/566/566300.png",
+                            "sizes": "512x512",
+                            "type": "image/png"
+                        }
+                    ]
+                };
+                const stringManifest = JSON.stringify(manifest);
+                const blob = new Blob([stringManifest], {type: 'application/json'});
+                const manifestURL = URL.createObjectURL(blob);
+                const linkEl = document.querySelector('#manifest-placeholder');
+                if(linkEl) linkEl.setAttribute('href', manifestURL);
+            } catch (e) {
+                console.warn("PWA Init failed (probably harmless):", e);
+            }
+        }
+
+        // --- Install Logic ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            // Update UI to notify the user they can add to home screen
+            if(installBtn) {
+                installBtn.classList.remove('hidden');
+                installBtn.classList.add('flex');
+            }
+        });
+
+        async function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                deferredPrompt = null;
+                installBtn.classList.add('hidden');
+                installBtn.classList.remove('flex');
+            }
+        }
+
         // --- Variables ---
         let startTime = 0;
         let timerInterval = null;
@@ -174,11 +255,23 @@
         const statAo12 = document.getElementById('statAo12');
 
         // --- Initialization ---
-        window.onload = () => {
-            loadHistory();
+        // Changed from window.onload to DOMContentLoaded for faster execution
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Generate scramble immediately (Critical Path)
             newScramble();
-            updateStats();
-        };
+
+            // 2. Load History safely
+            try {
+                loadHistory();
+                updateStats();
+            } catch (e) {
+                console.error("Failed to load history:", e);
+                // Continue running even if history fails
+            }
+
+            // 3. Init PWA last
+            initPWA();
+        });
 
         // --- Scramble Generator (3x3 WCA style simple) ---
         function generateScramble() {
@@ -214,7 +307,7 @@
         function newScramble() {
             if(state === 'RUNNING') return;
             currentScramble = generateScramble();
-            scrambleDisplay.innerText = currentScramble;
+            if(scrambleDisplay) scrambleDisplay.innerText = currentScramble;
         }
 
         // --- Timer Logic ---
@@ -288,8 +381,6 @@
 
         function handleInputDown() {
             if (state === 'RUNNING') {
-                // Do nothing, wait for up to stop? No, usually touch down stops it immediately in some apps, 
-                // but standard stackmat is stop on touch. Let's make ANY touch stop it.
                 stopTimer();
                 return;
             }
@@ -365,12 +456,18 @@
         function loadHistory() {
             const data = localStorage.getItem('cubeSolves');
             if (data) {
-                solves = JSON.parse(data);
-                renderHistory();
+                try {
+                    solves = JSON.parse(data);
+                    renderHistory();
+                } catch(e) {
+                    console.error("Data corrupted", e);
+                    solves = [];
+                }
             }
         }
 
         function renderHistory() {
+            if(!historyList) return;
             historyList.innerHTML = '';
             solves.forEach(solve => {
                 addHistoryItem(solve);
@@ -378,6 +475,7 @@
         }
 
         function addHistoryItem(solve) {
+            if(!historyList) return;
             const div = document.createElement('div');
             div.className = "bg-neutral-800 rounded p-3 flex justify-between items-center border border-neutral-700 group hover:border-neutral-600 transition";
             div.innerHTML = `
@@ -389,10 +487,6 @@
                     <i class="fas fa-times"></i>
                 </button>
             `;
-            // If rendering full list, append. If new solve, prepend.
-            // But simplify: renderHistory clears all. 
-            // This function is used by loadHistory (loop) or saveSolve.
-            // For saveSolve we might want to just prepend to DOM, but re-rendering is safer for index sync.
             if(historyList.children.length > 0 && solves[0].id === solve.id && historyList.children.length === solves.length -1) {
                 historyList.prepend(div);
             } else {
@@ -403,11 +497,7 @@
         function calculateAoN(n) {
             if (solves.length < n) return '--';
             const recent = solves.slice(0, n).map( => .time);
-            
-            // WCA Style: Remove best and worst, avg rest
-            recent.sort((a, b) => a - b); // Ascending
-            
-            // Remove smallest (index 0) and largest (index n-1)
+            recent.sort((a, b) => a - b);
             let sum = 0;
             for(let i = 1; i < n - 1; i++) {
                 sum += recent[i];
@@ -416,24 +506,18 @@
         }
 
         function updateStats() {
+            if(!statCount) return;
             statCount.innerText = solves.length;
-            
-            // Best
             if (solves.length > 0) {
                 const best = Math.min(...solves.map( => .time));
                 statBest.innerText = formatTime(best);
             } else {
                 statBest.innerText = '--';
             }
-
-            // Ao5
             statAo5.innerText = calculateAoN(5);
-            
-            // Ao12
             statAo12.innerText = calculateAoN(12);
         }
 
-        // --- UI Helpers ---
         function toggleHelp() {
             const modal = document.getElementById('helpModal');
             if (modal.classList.contains('hidden')) {
