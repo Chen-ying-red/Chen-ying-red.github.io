@@ -10,15 +10,14 @@
     
     <title>极速魔方计时器 | SpeedCube Timer</title>
 
-    <!-- Web App Manifest (Data URI for Single File Support) -->
-    <!-- This allows the app to be installed on Android and PC -->
+    <!-- Web App Manifest -->
     <link rel="manifest" id="manifest-placeholder">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Mono for timer) -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
@@ -26,8 +25,8 @@
             font-family: 'Roboto', sans-serif;
             background-color: #1a1a1a;
             color: #e5e5e5;
-            overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
-            user-select: none; /* Prevent text selection while tapping */
+            overscroll-behavior: none;
+            user-select: none;
             -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
@@ -40,7 +39,7 @@
         .scramble-text {
             letter-spacing: 2px;
             line-height: 1.6;
-            min-height: 3.2rem; /* Reserve space to prevent layout shift */
+            min-height: 3.5rem;
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -51,16 +50,11 @@
             scrollbar-width: none;
         }
 
-        .touch-active {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
         .timer-idle { color: #e5e5e5; }
-        .timer-holding { color: #ef4444; } /* Red */
-        .timer-ready { color: #22c55e; }   /* Green */
+        .timer-holding { color: #ef4444; }
+        .timer-ready { color: #22c55e; }
         .timer-running { color: #e5e5e5; }
 
-        /* Install Button Animation */
         @keyframes pulse-blue {
             0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
             50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
@@ -72,18 +66,16 @@
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- Navbar / Header -->
+    <!-- Navbar -->
     <header class="flex justify-between items-center px-6 py-4 bg-neutral-900 border-b border-neutral-800 safe-area-top">
         <div class="flex items-center gap-2">
             <i class="fas fa-cube text-blue-500 text-xl"></i>
             <h1 class="text-xl font-bold tracking-wide">CubeTimer</h1>
         </div>
         <div class="flex gap-4 items-center">
-            <!-- Install Button (Hidden by default) -->
             <button id="installBtn" onclick="installApp()" class="hidden bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded-full transition items-center gap-2 btn-install">
                 <i class="fas fa-download"></i> 安装应用
             </button>
-
             <button onclick="clearHistory()" class="text-neutral-400 hover:text-red-400 transition" title="清空所有数据">
                 <i class="fas fa-trash-alt"></i>
             </button>
@@ -93,18 +85,15 @@
         </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <main class="flex-1 flex flex-col relative" id="touchArea">
-        
-        <!-- Scramble Display -->
         <div class="pt-8 px-4 text-center z-10">
             <div class="text-sm text-neutral-500 mb-2 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
-            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-300 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()" title="点击生成新打乱">
-                <!-- Initial placeholder is empty to avoid 'Loading...' flash if fast, or stuck if slow -->
+            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-300 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()">
+                <!-- JS will inject scramble here -->
             </div>
         </div>
 
-        <!-- Timer Display -->
         <div class="flex-1 flex items-center justify-center flex-col z-10">
             <div id="timerDisplay" class="timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle transition-colors duration-100">
                 0.00
@@ -115,7 +104,6 @@
             </div>
         </div>
 
-        <!-- Statistics Strip -->
         <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-4 z-20 safe-area-bottom">
             <div class="max-w-4xl mx-auto grid grid-cols-4 gap-4 text-center">
                 <div class="flex flex-col">
@@ -123,7 +111,7 @@
                     <span id="statCount" class="text-xl font-bold text-white">0</span>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500 uppercase">最快 (Best)</span>
+                    <span class="text-xs text-neutral-500 uppercase">最快</span>
                     <span id="statBest" class="text-xl font-bold text-blue-400">--</span>
                 </div>
                 <div class="flex flex-col">
@@ -138,16 +126,13 @@
         </div>
     </main>
 
-    <!-- History Sidebar -->
+    <!-- History -->
     <div class="bg-neutral-900 border-t border-neutral-800 h-48 md:h-64 flex flex-col">
         <div class="px-4 py-2 bg-neutral-800 flex justify-between items-center">
             <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider">历史记录</span>
-            <span class="text-xs text-neutral-500">点击成绩可删除</span>
         </div>
         <div class="flex-1 overflow-y-auto no-scrollbar p-2">
-            <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                <!-- History items will be injected here -->
-            </div>
+            <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2"></div>
         </div>
     </div>
 
@@ -156,124 +141,34 @@
         <div class="bg-neutral-800 p-6 rounded-xl max-w-sm w-full mx-4 border border-neutral-700 shadow-2xl" onclick="event.stopPropagation()">
             <h2 class="text-xl font-bold mb-4 text-white">使用说明</h2>
             <ul class="space-y-3 text-neutral-300 text-sm">
-                <li class="flex items-start gap-2">
-                    <i class="fas fa-desktop mt-1 text-blue-400"></i>
-                    <span><b>电脑端：</b>按住空格键直到数字变绿，松开开始计时。</span>
-                </li>
-                <li class="flex items-start gap-2">
-                    <i class="fas fa-mobile-alt mt-1 text-green-400"></i>
-                    <span><b>手机端：</b>手指按住计时区域直到变绿，松开开始。</span>
-                </li>
-                <li class="flex items-start gap-2">
-                    <i class="fas fa-download mt-1 text-purple-400"></i>
-                    <span><b>安装：</b>点击右上角“安装应用”或浏览器菜单的“添加到主屏幕”，可离线全屏使用。</span>
-                </li>
+                <li><b>电脑：</b>按住空格直至变绿，松开开始。</li>
+                <li><b>手机：</b>长按屏幕直至变绿，松开开始。</li>
+                <li><b>离线使用：</b>点击右上角“安装应用”即可。</li>
             </ul>
-            <button onclick="toggleHelp()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition">明白了</button>
+            <button onclick="toggleHelp()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium">确定</button>
         </div>
     </div>
 
     <script>
-        // --- PWA & Manifest Generation ---
-        function initPWA() {
-            try {
-                // Generate Manifest dynamically to keep single file structure
-                const manifest = {
-                    "name": "极速魔方计时器",
-                    "short_name": "CubeTimer",
-                    "start_url": ".",
-                    "display": "standalone",
-                    "background_color": "#1a1a1a",
-                    "theme_color": "#171717",
-                    "orientation": "portrait",
-                    "icons": [
-                        {
-                            "src": "https://cdn-icons-png.flaticon.com/512/566/566300.png",
-                            "sizes": "512x512",
-                            "type": "image/png"
-                        }
-                    ]
-                };
-                const stringManifest = JSON.stringify(manifest);
-                const blob = new Blob([stringManifest], {type: 'application/json'});
-                const manifestURL = URL.createObjectURL(blob);
-                const linkEl = document.querySelector('#manifest-placeholder');
-                if(linkEl) linkEl.setAttribute('href', manifestURL);
-            } catch (e) {
-                console.warn("PWA Init failed (probably harmless):", e);
-            }
-        }
-
-        // --- Install Logic ---
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            e.preventDefault();
-            // Stash the event so it can be triggered later.
-            deferredPrompt = e;
-            // Update UI to notify the user they can add to home screen
-            if(installBtn) {
-                installBtn.classList.remove('hidden');
-                installBtn.classList.add('flex');
-            }
-        });
-
-        async function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                }
-                deferredPrompt = null;
-                installBtn.classList.add('hidden');
-                installBtn.classList.remove('flex');
-            }
-        }
-
-        // --- Variables ---
+        // --- Core Variables ---
         let startTime = 0;
         let timerInterval = null;
-        let state = 'IDLE'; // IDLE, HOLDING, READY, RUNNING
+        let state = 'IDLE'; 
         let solves = [];
         let currentScramble = "";
         let holdingTimeout = null;
-        
-        // DOM Elements
-        const timerDisplay = document.getElementById('timerDisplay');
-        const scrambleDisplay = document.getElementById('scrambleDisplay');
-        const touchArea = document.getElementById('touchArea');
-        const historyList = document.getElementById('historyList');
-        const instructionText = document.getElementById('instructionText');
 
-        // Stats Elements
-        const statCount = document.getElementById('statCount');
-        const statBest = document.getElementById('statBest');
-        const statAo5 = document.getElementById('statAo5');
-        const statAo12 = document.getElementById('statAo12');
-
-        // --- Initialization ---
-        // Changed from window.onload to DOMContentLoaded for faster execution
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. Generate scramble immediately (Critical Path)
-            newScramble();
-
-            // 2. Load History safely
-            try {
-                loadHistory();
-                updateStats();
-            } catch (e) {
-                console.error("Failed to load history:", e);
-                // Continue running even if history fails
+        // --- Critical Initialization ---
+        // Force immediate execution for scramble display
+        function runImmediateInit() {
+            const display = document.getElementById('scrambleDisplay');
+            if (display) {
+                currentScramble = generateScramble();
+                display.innerText = currentScramble;
             }
+        }
 
-            // 3. Init PWA last
-            initPWA();
-        });
-
-        // --- Scramble Generator (3x3 WCA style simple) ---
+        // --- Scramble Generator ---
         function generateScramble() {
             const moves = ["U", "D", "L", "R", "F", "B"];
             const modifiers = ["", "'", "2"];
@@ -285,14 +180,9 @@
                 let move;
                 do {
                     move = moves[Math.floor(Math.random() * moves.length)];
-                } while (
-                    move === lastMove || 
-                    (move === secondLastMove && isOpposite(move, lastMove))
-                );
-
+                } while (move === lastMove || (move === secondLastMove && isOpposite(move, lastMove)));
                 let modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
                 scramble.push(move + modifier);
-                
                 secondLastMove = lastMove;
                 lastMove = move;
             }
@@ -307,223 +197,166 @@
         function newScramble() {
             if(state === 'RUNNING') return;
             currentScramble = generateScramble();
-            if(scrambleDisplay) scrambleDisplay.innerText = currentScramble;
+            document.getElementById('scrambleDisplay').innerText = currentScramble;
         }
 
-        // --- Timer Logic ---
+        // --- Timer Functions ---
         function formatTime(ms) {
             let seconds = Math.floor(ms / 1000);
-            let milliseconds = Math.floor((ms % 1000) / 10); // Show 2 decimal places
+            let milliseconds = Math.floor((ms % 1000) / 10);
             return `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
         }
 
         function updateTimerDisplay() {
-            const now = Date.now();
-            const diff = now - startTime;
-            timerDisplay.innerText = formatTime(diff);
+            timerDisplay.innerText = formatTime(Date.now() - startTime);
         }
 
         function startTimer() {
             state = 'RUNNING';
             startTime = Date.now();
-            timerDisplay.classList.remove('timer-ready');
-            timerDisplay.classList.add('timer-running');
-            instructionText.style.opacity = '0';
-            scrambleDisplay.style.opacity = '0';
-            
+            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-running';
+            document.getElementById('instructionText').style.opacity = '0';
+            document.getElementById('scrambleDisplay').style.opacity = '0';
             timerInterval = setInterval(updateTimerDisplay, 10);
         }
 
         function stopTimer() {
             clearInterval(timerInterval);
-            const endTime = Date.now();
-            const finalTime = endTime - startTime;
+            const finalTime = Date.now() - startTime;
             state = 'IDLE';
-            
             timerDisplay.innerText = formatTime(finalTime);
-            timerDisplay.classList.remove('timer-running');
-            timerDisplay.classList.add('timer-idle');
-            instructionText.style.opacity = '1';
-            scrambleDisplay.style.opacity = '1';
-
+            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-idle';
+            document.getElementById('instructionText').style.opacity = '1';
+            document.getElementById('scrambleDisplay').style.opacity = '1';
             saveSolve(finalTime);
             newScramble();
         }
 
-        // --- Input Handling (Keyboard & Touch) ---
-        
-        // Keyboard
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault(); // Prevent scrolling
-                handleInputDown();
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'Space') {
-                handleInputUp();
-            }
-        });
-
-        // Touch
-        touchArea.addEventListener('touchstart', (e) => {
-            if (e.target.closest('button') || e.target.closest('#historyList')) return;
-            e.preventDefault();
-            handleInputDown();
-        }, { passive: false });
-
-        touchArea.addEventListener('touchend', (e) => {
-             if (e.target.closest('button') || e.target.closest('#historyList')) return;
-            e.preventDefault();
-            handleInputUp();
-        });
-
+        // --- Input Logic ---
         function handleInputDown() {
-            if (state === 'RUNNING') {
-                stopTimer();
-                return;
-            }
-
+            if (state === 'RUNNING') { stopTimer(); return; }
             if (state === 'IDLE') {
                 state = 'HOLDING';
-                timerDisplay.classList.remove('timer-idle');
-                timerDisplay.classList.add('timer-holding'); // Red
+                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-holding';
                 timerDisplay.innerText = '0.00';
-                
-                // Wait 0.3s to become ready
                 holdingTimeout = setTimeout(() => {
                     if (state === 'HOLDING') {
                         state = 'READY';
-                        timerDisplay.classList.remove('timer-holding');
-                        timerDisplay.classList.add('timer-ready'); // Green
+                        timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-ready';
                     }
                 }, 300);
             }
         }
 
         function handleInputUp() {
-            if (state === 'RUNNING') {
-                // If we stopped on keydown, do nothing here
-                return;
-            }
-
-            if (state === 'READY') {
-                startTimer();
-            } else if (state === 'HOLDING') {
-                // Released too early
+            if (state === 'READY') { startTimer(); }
+            else if (state === 'HOLDING') {
                 clearTimeout(holdingTimeout);
                 state = 'IDLE';
-                timerDisplay.classList.remove('timer-holding');
-                timerDisplay.classList.add('timer-idle');
+                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-idle';
             }
         }
 
-        // --- Statistics & History ---
-
+        // --- Storage & Stats ---
         function saveSolve(timeMs) {
-            const solve = {
-                id: Date.now(),
-                time: timeMs,
-                scramble: currentScramble,
-                date: new Date().toISOString()
-            };
-            solves.unshift(solve); // Add to beginning
-            localStorage.setItem('cubeSolves', JSON.stringify(solves));
-            
-            addHistoryItem(solve);
-            updateStats();
-        }
-
-        function deleteSolve(id) {
-            if(!confirm('确定要删除这条成绩吗？')) return;
-            solves = solves.filter(s => s.id !== id);
+            const solve = { id: Date.now(), time: timeMs, scramble: currentScramble };
+            solves.unshift(solve);
             localStorage.setItem('cubeSolves', JSON.stringify(solves));
             renderHistory();
             updateStats();
         }
 
-        function clearHistory() {
-            if(solves.length === 0) return;
-            if(!confirm('确定要清空所有历史成绩吗？此操作无法撤销。')) return;
-            solves = [];
-            localStorage.removeItem('cubeSolves');
-            renderHistory();
-            updateStats();
-            timerDisplay.innerText = "0.00";
-        }
-
-        function loadHistory() {
-            const data = localStorage.getItem('cubeSolves');
-            if (data) {
-                try {
-                    solves = JSON.parse(data);
-                    renderHistory();
-                } catch(e) {
-                    console.error("Data corrupted", e);
-                    solves = [];
-                }
+        function updateStats() {
+            document.getElementById('statCount').innerText = solves.length;
+            if (solves.length > 0) {
+                const best = Math.min(...solves.map(s => s.time));
+                document.getElementById('statBest').innerText = formatTime(best);
             }
-        }
-
-        function renderHistory() {
-            if(!historyList) return;
-            historyList.innerHTML = '';
-            solves.forEach(solve => {
-                addHistoryItem(solve);
-            });
-        }
-
-        function addHistoryItem(solve) {
-            if(!historyList) return;
-            const div = document.createElement('div');
-            div.className = "bg-neutral-800 rounded p-3 flex justify-between items-center border border-neutral-700 group hover:border-neutral-600 transition";
-            div.innerHTML = `
-                <div class="flex items-center gap-3 overflow-hidden">
-                    <span class="text-xl font-mono font-bold text-white">${formatTime(solve.time)}</span>
-                    <span class="text-xs text-neutral-500 truncate w-24 md:w-32" title="${solve.scramble}">${solve.scramble}</span>
-                </div>
-                <button onclick="deleteSolve(${solve.id})" class="text-neutral-600 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition focus:opacity-100">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            if(historyList.children.length > 0 && solves[0].id === solve.id && historyList.children.length === solves.length -1) {
-                historyList.prepend(div);
-            } else {
-               historyList.appendChild(div);
-            }
+            document.getElementById('statAo5').innerText = calculateAoN(5);
+            document.getElementById('statAo12').innerText = calculateAoN(12);
         }
 
         function calculateAoN(n) {
             if (solves.length < n) return '--';
-            const recent = solves.slice(0, n).map( => .time);
-            recent.sort((a, b) => a - b);
+            const recent = solves.slice(0, n).map(s => s.time).sort((a,b) => a-b);
             let sum = 0;
-            for(let i = 1; i < n - 1; i++) {
-                sum += recent[i];
-            }
-            return formatTime(sum / (n - 2));
+            for(let i=1; i<n-1; i++) sum += recent[i];
+            return formatTime(sum / (n-2));
         }
 
-        function updateStats() {
-            if(!statCount) return;
-            statCount.innerText = solves.length;
-            if (solves.length > 0) {
-                const best = Math.min(...solves.map( => .time));
-                statBest.innerText = formatTime(best);
-            } else {
-                statBest.innerText = '--';
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            solves.slice(0, 20).forEach( => {
+                const div = document.createElement('div');
+                div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700";
+                div.innerHTML = `<span class="font-mono font-bold text-white">${formatTime(.time)}</span><span class="text-[10px] text-neutral-500 truncate w-20">${.scramble}</span>`;
+                list.appendChild(div);
+            });
+        }
+
+        function clearHistory() {
+            if(confirm('清空所有记录？')) {
+                solves = [];
+                localStorage.removeItem('cubeSolves');
+                renderHistory();
+                updateStats();
             }
-            statAo5.innerText = calculateAoN(5);
-            statAo12.innerText = calculateAoN(12);
         }
 
         function toggleHelp() {
             const modal = document.getElementById('helpModal');
-            if (modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden');
-            } else {
-                modal.classList.add('hidden');
+            modal.classList.toggle('hidden');
+        }
+
+        // --- Event Listeners ---
+        document.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); handleInputDown(); } });
+        document.addEventListener('keyup', (e) => { if(e.code === 'Space') handleInputUp(); });
+        
+        const touchArea = document.getElementById('touchArea');
+        touchArea.addEventListener('touchstart', (e) => { if(!e.target.closest('button')) { e.preventDefault(); handleInputDown(); } }, {passive: false});
+        touchArea.addEventListener('touchend', (e) => { if(!e.target.closest('button')) { e.preventDefault(); handleInputUp(); } });
+
+        // --- Lifecycle ---
+        const timerDisplay = document.getElementById('timerDisplay');
+        
+        // 1. Immediate Logic
+        runImmediateInit();
+
+        // 2. DOM Ready Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = localStorage.getItem('cubeSolves');
+            if(data) solves = JSON.parse(data);
+            renderHistory();
+            updateStats();
+            
+            // PWA Manifest Init
+            const manifest = {
+                "name": "极速魔方计时器",
+                "short_name": "CubeTimer",
+                "display": "standalone",
+                "start_url": ".",
+                "theme_color": "#171717",
+                "background_color": "#1a1a1a",
+                "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/566/566300.png", "sizes": "512x512", "type": "image/png"}]
+            };
+            const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+            document.querySelector('#manifest-placeholder').setAttribute('href', 网站.createObjectURL(blob));
+        });
+
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').classList.remove('hidden');
+        });
+
+        async function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+                document.getElementById('installBtn').classList.add('hidden');
             }
         }
     </script>
