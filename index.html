@@ -89,8 +89,8 @@
     <main class="flex-1 flex flex-col relative" id="touchArea">
         <div class="pt-8 px-4 text-center z-10">
             <div class="text-sm text-neutral-500 mb-2 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
-            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-300 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()">
-                <!-- JS will inject scramble here -->
+            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-400 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()">
+                正在生成打乱公式...
             </div>
         </div>
 
@@ -150,6 +150,11 @@
     </div>
 
     <script>
+        /** * 优化说明：
+         * 为了解决 GitHub 加载慢导致的打乱公式不显示，我们将初始化逻辑
+         * 提升到脚本最顶层，不等待任何外部资源（如图片或字体）。
+         */
+
         // --- Core Variables ---
         let startTime = 0;
         let timerInterval = null;
@@ -157,16 +162,6 @@
         let solves = [];
         let currentScramble = "";
         let holdingTimeout = null;
-
-        // --- Critical Initialization ---
-        // Force immediate execution for scramble display
-        function runImmediateInit() {
-            const display = document.getElementById('scrambleDisplay');
-            if (display) {
-                currentScramble = generateScramble();
-                display.innerText = currentScramble;
-            }
-        }
 
         // --- Scramble Generator ---
         function generateScramble() {
@@ -197,8 +192,23 @@
         function newScramble() {
             if(state === 'RUNNING') return;
             currentScramble = generateScramble();
-            document.getElementById('scrambleDisplay').innerText = currentScramble;
+            const display = document.getElementById('scrambleDisplay');
+            if(display) display.innerText = currentScramble;
         }
+
+        // --- 强制立即执行初始化 ---
+        // 即使 HTML 还没完全解析完，只要 script 标签之后的 DOM 存在就执行
+        (function forceInit() {
+            const checkExist = setInterval(() => {
+                const display = document.getElementById('scrambleDisplay');
+                if (display) {
+                    newScramble();
+                    clearInterval(checkExist);
+                }
+            }, 10);
+            // 5秒后停止尝试，防止死循环
+            setTimeout(() => clearInterval(checkExist), 5000);
+        })();
 
         // --- Timer Functions ---
         function formatTime(ms) {
@@ -208,12 +218,14 @@
         }
 
         function updateTimerDisplay() {
-            timerDisplay.innerText = formatTime(Date.now() - startTime);
+            const timerDisplay = document.getElementById('timerDisplay');
+            if(timerDisplay) timerDisplay.innerText = formatTime(Date.now() - startTime);
         }
 
         function startTimer() {
             state = 'RUNNING';
             startTime = Date.now();
+            const timerDisplay = document.getElementById('timerDisplay');
             timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-running';
             document.getElementById('instructionText').style.opacity = '0';
             document.getElementById('scrambleDisplay').style.opacity = '0';
@@ -224,6 +236,7 @@
             clearInterval(timerInterval);
             const finalTime = Date.now() - startTime;
             state = 'IDLE';
+            const timerDisplay = document.getElementById('timerDisplay');
             timerDisplay.innerText = formatTime(finalTime);
             timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-idle';
             document.getElementById('instructionText').style.opacity = '1';
@@ -237,6 +250,7 @@
             if (state === 'RUNNING') { stopTimer(); return; }
             if (state === 'IDLE') {
                 state = 'HOLDING';
+                const timerDisplay = document.getElementById('timerDisplay');
                 timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-holding';
                 timerDisplay.innerText = '0.00';
                 holdingTimeout = setTimeout(() => {
@@ -253,6 +267,7 @@
             else if (state === 'HOLDING') {
                 clearTimeout(holdingTimeout);
                 state = 'IDLE';
+                const timerDisplay = document.getElementById('timerDisplay');
                 timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-idle';
             }
         }
@@ -286,11 +301,12 @@
 
         function renderHistory() {
             const list = document.getElementById('historyList');
+            if(!list) return;
             list.innerHTML = '';
-            solves.slice(0, 20).forEach( => {
+            solves.slice(0, 20).forEach(s => {
                 const div = document.createElement('div');
                 div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700";
-                div.innerHTML = `<span class="font-mono font-bold text-white">${formatTime(.time)}</span><span class="text-[10px] text-neutral-500 truncate w-20">${.scramble}</span>`;
+                div.innerHTML = `<span class="font-mono font-bold text-white">${formatTime(s.time)}</span><span class="text-[10px] text-neutral-500 truncate w-20">${s.scramble}</span>`;
                 list.appendChild(div);
             });
         }
@@ -313,18 +329,24 @@
         document.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); handleInputDown(); } });
         document.addEventListener('keyup', (e) => { if(e.code === 'Space') handleInputUp(); });
         
-        const touchArea = document.getElementById('touchArea');
-        touchArea.addEventListener('touchstart', (e) => { if(!e.target.closest('button')) { e.preventDefault(); handleInputDown(); } }, {passive: false});
-        touchArea.addEventListener('touchend', (e) => { if(!e.target.closest('button')) { e.preventDefault(); handleInputUp(); } });
-
-        // --- Lifecycle ---
-        const timerDisplay = document.getElementById('timerDisplay');
-        
-        // 1. Immediate Logic
-        runImmediateInit();
-
-        // 2. DOM Ready Logic
+        // Touch events need to wait for DOM to bind
         document.addEventListener('DOMContentLoaded', () => {
+            const touchArea = document.getElementById('touchArea');
+            if(touchArea) {
+                touchArea.addEventListener('touchstart', (e) => { 
+                    if(!e.target.closest('button')) { 
+                        e.preventDefault(); 
+                        handleInputDown(); 
+                    } 
+                }, {passive: false});
+                touchArea.addEventListener('touchend', (e) => { 
+                    if(!e.target.closest('button')) { 
+                        e.preventDefault(); 
+                        handleInputUp(); 
+                    } 
+                });
+            }
+
             const data = localStorage.getItem('cubeSolves');
             if(data) solves = JSON.parse(data);
             renderHistory();
@@ -341,7 +363,8 @@
                 "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/566/566300.png", "sizes": "512x512", "type": "image/png"}]
             };
             const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-            document.querySelector('#manifest-placeholder').setAttribute('href', 网站.createObjectURL(blob));
+            const manifestPlaceholder = document.querySelector('#manifest-placeholder');
+            if(manifestPlaceholder) manifestPlaceholder.setAttribute('href', 网站.createObjectURL(blob));
         });
 
         // PWA Install
@@ -349,14 +372,16 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('installBtn').classList.remove('hidden');
+            const installBtn = document.getElementById('installBtn');
+            if(installBtn) installBtn.classList.remove('hidden');
         });
 
         async function installApp() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt = null;
-                document.getElementById('installBtn').classList.add('hidden');
+                const installBtn = document.getElementById('installBtn');
+                if(installBtn) installBtn.classList.add('hidden');
             }
         }
     </script>
