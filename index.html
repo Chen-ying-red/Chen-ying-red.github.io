@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <!-- PWA Theme Color -->
     <meta name="theme-color" content="#171717">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,7 +23,7 @@
     <style>
         /* 预设一些关键样式，防止异步 CSS 加载前页面闪烁 */
         body {
-            font-family: sans-serif;
+            font-family: 'Roboto', -apple-system, sans-serif;
             background-color: #1a1a1a;
             color: #e5e5e5;
             margin: 0;
@@ -31,19 +31,24 @@
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            /* 防止移动端缩放和过度滚动 */
+            touch-action: manipulation;
+            overscroll-behavior: none;
         }
         
         .timer-font {
-            font-family: monospace; /* 备用字体 */
+            font-family: 'JetBrains Mono', monospace;
             font-variant-numeric: tabular-nums;
         }
 
         .scramble-text {
-            letter-spacing: 2px;
-            line-height: 1.6;
-            min-height: 3.5rem;
+            letter-spacing: 1px;
+            line-height: 1.4;
+            min-height: 4rem;
             text-align: center;
-            padding: 20px;
+            padding: 15px;
+            /* 允许在移动端更易阅读 */
+            word-break: break-word;
         }
 
         .timer-idle { color: #e5e5e5; }
@@ -51,9 +56,34 @@
         .timer-ready { color: #22c55e; }
         .timer-running { color: #e5e5e5; }
 
+        /* 移动端适配优化 */
+        #touchArea {
+            /* 确保整个区域对触控敏感，但不触发系统菜单 */
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 针对刘海屏的适配 */
+        header {
+            padding-top: env(safe-area-inset-top, 16px);
+        }
+        .safe-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+        }
+
         @keyframes pulse-blue {
             0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
             50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        }
+
+        /* 自定义滚动条 */
+        #historyList::-webkit-scrollbar {
+            width: 4px;
+        }
+        #historyList::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -92,7 +122,6 @@
             if (display) {
                 window.currentScramble = generateScramble();
                 display.innerText = window.currentScramble;
-                console.log("Scramble generated successfully");
             }
         }
 
@@ -106,58 +135,64 @@
     </script>
 
     <!-- Navbar -->
-    <header class="flex justify-between items-center px-6 py-4 bg-neutral-900 border-b border-neutral-800">
+    <header class="flex justify-between items-center px-4 md:px-6 py-4 bg-neutral-900 border-b border-neutral-800">
         <div class="flex items-center gap-2">
-            <h1 class="text-xl font-bold tracking-wide">CubeTimer</h1>
+            <h1 class="text-lg md:text-xl font-bold tracking-wide">CubeTimer</h1>
         </div>
-        <div class="flex gap-4 items-center">
-            <button id="installBtn" onclick="installApp()" class="hidden bg-blue-600 text-white text-xs font-bold py-1.5 px-3 rounded-full">安装应用</button>
-            <button onclick="clearHistory()" class="text-neutral-400 hover:text-red-400"><i class="fas fa-trash-alt"></i></button>
+        <div class="flex gap-3 md:gap-4 items-center">
+            <button id="installBtn" onclick="installApp()" class="hidden bg-blue-600 text-white text-[10px] md:text-xs font-bold py-1.5 px-3 rounded-full">安装应用</button>
+            <button onclick="clearHistory()" class="text-neutral-400 hover:text-red-400 p-1"><i class="fas fa-trash-alt"></i></button>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col relative" id="touchArea">
-        <div class="pt-8 px-4 text-center z-10">
-            <div class="text-sm text-neutral-500 mb-2 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
+        <div class="pt-6 md:pt-8 px-4 text-center z-10">
+            <div class="text-[10px] md:text-sm text-neutral-500 mb-1 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
             <!-- 这里就是打乱显示区域 -->
-            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-400 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()">
+            <div id="scrambleDisplay" class="scramble-text text-lg md:text-3xl font-medium text-neutral-400 max-w-4xl mx-auto cursor-pointer hover:text-white transition active:scale-95" onclick="newScramble()">
                 Loading...
             </div>
         </div>
 
         <div class="flex-1 flex items-center justify-center flex-col z-10">
-            <div id="timerDisplay" class="timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle">
+            <div id="timerDisplay" class="timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-idle select-none">
                 0.00
+            </div>
+            <div class="mt-4 text-neutral-600 text-[10px] md:text-xs uppercase tracking-tighter md:tracking-normal">
+                长按屏幕准备 / 松开开始
             </div>
         </div>
 
-        <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-4 z-20">
-            <div class="max-w-4xl mx-auto grid grid-cols-4 gap-4 text-center">
+        <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-3 md:p-4 z-20 safe-bottom">
+            <div class="max-w-4xl mx-auto grid grid-cols-4 gap-2 md:gap-4 text-center">
                 <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500">次数</span>
-                    <span id="statCount" class="text-xl font-bold">0</span>
+                    <span class="text-[10px] md:text-xs text-neutral-500 uppercase">次数</span>
+                    <span id="statCount" class="text-base md:text-xl font-bold">0</span>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500">最快</span>
-                    <span id="statBest" class="text-xl font-bold text-blue-400">--</span>
+                    <span class="text-[10px] md:text-xs text-neutral-500 uppercase">最快</span>
+                    <span id="statBest" class="text-base md:text-xl font-bold text-blue-400">--</span>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500">Ao5</span>
-                    <span id="statAo5" class="text-xl font-bold text-yellow-400">--</span>
+                    <span class="text-[10px] md:text-xs text-neutral-500 uppercase">Ao5</span>
+                    <span id="statAo5" class="text-base md:text-xl font-bold text-yellow-400">--</span>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500">Ao12</span>
-                    <span id="statAo12" class="text-xl font-bold text-purple-400">--</span>
+                    <span class="text-[10px] md:text-xs text-neutral-500 uppercase">Ao12</span>
+                    <span id="statAo12" class="text-base md:text-xl font-bold text-purple-400">--</span>
                 </div>
             </div>
         </div>
     </main>
 
     <!-- History -->
-    <div class="bg-neutral-900 border-t border-neutral-800 h-48 md:h-64 flex flex-col">
-        <div class="px-4 py-2 bg-neutral-800"><span class="text-xs font-bold text-neutral-400">历史记录</span></div>
-        <div id="historyList" class="flex-1 overflow-y-auto p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2"></div>
+    <div class="bg-neutral-900 border-t border-neutral-800 h-40 md:h-64 flex flex-col">
+        <div class="px-4 py-1.5 bg-neutral-800 flex justify-between items-center">
+            <span class="text-[10px] md:text-xs font-bold text-neutral-400 uppercase">历史记录</span>
+            <span class="text-[10px] text-neutral-600">最近 20 条</span>
+        </div>
+        <div id="historyList" class="flex-1 overflow-y-auto p-2 grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2"></div>
     </div>
 
     <script>
@@ -190,7 +225,7 @@
         function startTimer() {
             state = 'RUNNING';
             startTime = Date.now();
-            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-running';
+            timerDisplay.className = 'timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-running';
             document.getElementById('scrambleDisplay').style.opacity = '0';
             timerInterval = setInterval(updateTimerDisplay, 10);
         }
@@ -200,7 +235,7 @@
             const finalTime = Date.now() - startTime;
             state = 'IDLE';
             timerDisplay.innerText = formatTime(finalTime);
-            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle';
+            timerDisplay.className = 'timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-idle';
             document.getElementById('scrambleDisplay').style.opacity = '1';
             saveSolve(finalTime);
             newScramble();
@@ -211,13 +246,13 @@
             if (state === 'RUNNING') { stopTimer(); return; }
             if (state === 'IDLE') {
                 state = 'HOLDING';
-                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-holding';
+                timerDisplay.className = 'timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-holding';
                 holdingTimeout = setTimeout(() => {
                     if (state === 'HOLDING') {
                         state = 'READY';
-                        timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-ready';
+                        timerDisplay.className = 'timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-ready';
                     }
-                }, 300);
+                }, 400); // 移动端略微增加确认感
             }
         }
 
@@ -226,7 +261,7 @@
             else if (state === 'HOLDING') {
                 clearTimeout(holdingTimeout);
                 state = 'IDLE';
-                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle';
+                timerDisplay.className = 'timer-font text-[22vw] md:text-[12rem] font-bold leading-none timer-idle';
             }
         }
 
@@ -242,7 +277,7 @@
         function updateStats() {
             document.getElementById('statCount').innerText = solves.length;
             if (solves.length > 0) {
-                const best = Math.min(...solves.map( => .time));
+                const best = Math.min(...solves.map(s => s.time));
                 document.getElementById('statBest').innerText = formatTime(best);
             }
             document.getElementById('statAo5').innerText = calculateAoN(5);
@@ -261,10 +296,10 @@
             const list = document.getElementById('historyList');
             if(!list) return;
             list.innerHTML = '';
-            solves.slice(0, 10).forEach( => {
+            solves.slice(0, 20).forEach((, idx) => {
                 const div = document.createElement('div');
-                div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-sm";
-                div.innerHTML = `<span class="font-bold">${formatTime(.time)}</span><span class="text-[10px] text-neutral-500 truncate w-24">${.scramble}</span>`;
+                div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-xs";
+                div.innerHTML = `<span class="text-neutral-500 mr-2">${solves.length - idx}.</span><span class="font-bold text-white">${formatTime(.time)}</span><span class="text-[9px] text-neutral-500 truncate ml-2 flex-1 text-right">${.scramble}</span>`;
                 list.appendChild(div);
             });
         }
@@ -279,13 +314,30 @@
         }
 
         // --- Events ---
-        document.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); handleInputDown(); } });
-        document.addEventListener('keyup', (e) => { if(e.code === 'Space') handleInputUp(); });
+        document.addEventListener('keydown', (e) => { 
+            if(e.code === 'Space') { 
+                e.preventDefault(); 
+                if(!e.repeat) handleInputDown(); 
+            } 
+        });
+        document.addEventListener('keyup', (e) => { 
+            if(e.code === 'Space') handleInputUp(); 
+        });
         
         document.addEventListener('DOMContentLoaded', () => {
             const touchArea = document.getElementById('touchArea');
-            touchArea.addEventListener('touchstart', (e) => { if(!e.target.closest('button')) { e.preventDefault(); handleInputDown(); } }, {passive: false});
-            touchArea.addEventListener('touchend', (e) => { if(!e.target.closest('button')) handleInputUp(); });
+            
+            // 改进移动端触控逻辑
+            touchArea.addEventListener('touchstart', (e) => { 
+                if(!e.target.closest('button') && !e.target.closest('#scrambleDisplay')) { 
+                    e.preventDefault(); 
+                    handleInputDown(); 
+                } 
+            }, {passive: false});
+            
+            touchArea.addEventListener('touchend', (e) => { 
+                if(!e.target.closest('button')) handleInputUp(); 
+            });
 
             const data = localStorage.getItem('cubeSolves');
             if(data) solves = JSON.parse(data);
