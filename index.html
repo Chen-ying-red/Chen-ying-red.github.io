@@ -13,26 +13,28 @@
     <!-- Web App Manifest -->
     <link rel="manifest" id="manifest-placeholder">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <!-- 关键优化 1: 将 CSS 库改为异步加载，避免阻塞打乱公式生成 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    
+    <!-- Tailwind CSS (GitHub 访问较慢时容易导致白屏，设为异步执行) -->
+    <script src="https://cdn.tailwindcss.com" async></script>
     
     <style>
+        /* 预设一些关键样式，防止异步 CSS 加载前页面闪烁 */
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: sans-serif;
             background-color: #1a1a1a;
             color: #e5e5e5;
-            overscroll-behavior: none;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
         
         .timer-font {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: monospace; /* 备用字体 */
             font-variant-numeric: tabular-nums;
         }
 
@@ -40,14 +42,8 @@
             letter-spacing: 2px;
             line-height: 1.6;
             min-height: 3.5rem;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+            text-align: center;
+            padding: 20px;
         }
 
         .timer-idle { color: #e5e5e5; }
@@ -59,111 +55,14 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
             50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
         }
-        .btn-install {
-            animation: pulse-blue 2s infinite;
-        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- Navbar -->
-    <header class="flex justify-between items-center px-6 py-4 bg-neutral-900 border-b border-neutral-800 safe-area-top">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-cube text-blue-500 text-xl"></i>
-            <h1 class="text-xl font-bold tracking-wide">CubeTimer</h1>
-        </div>
-        <div class="flex gap-4 items-center">
-            <button id="installBtn" onclick="installApp()" class="hidden bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded-full transition items-center gap-2 btn-install">
-                <i class="fas fa-download"></i> 安装应用
-            </button>
-            <button onclick="clearHistory()" class="text-neutral-400 hover:text-red-400 transition" title="清空所有数据">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-            <button onclick="toggleHelp()" class="text-neutral-400 hover:text-blue-400 transition" title="帮助">
-                <i class="fas fa-question-circle"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col relative" id="touchArea">
-        <div class="pt-8 px-4 text-center z-10">
-            <div class="text-sm text-neutral-500 mb-2 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
-            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-400 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()">
-                正在生成打乱公式...
-            </div>
-        </div>
-
-        <div class="flex-1 flex items-center justify-center flex-col z-10">
-            <div id="timerDisplay" class="timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle transition-colors duration-100">
-                0.00
-            </div>
-            <div id="instructionText" class="text-neutral-500 mt-4 text-sm md:text-base animate-pulse">
-                <span class="hidden md:inline">按住 <kbd class="bg-neutral-800 px-2 py-1 rounded border border-neutral-700">空格</kbd> 准备</span>
-                <span class="md:hidden">按住屏幕准备</span>
-            </div>
-        </div>
-
-        <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-4 z-20 safe-area-bottom">
-            <div class="max-w-4xl mx-auto grid grid-cols-4 gap-4 text-center">
-                <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500 uppercase">次数</span>
-                    <span id="statCount" class="text-xl font-bold text-white">0</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500 uppercase">最快</span>
-                    <span id="statBest" class="text-xl font-bold text-blue-400">--</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500 uppercase">Ao5</span>
-                    <span id="statAo5" class="text-xl font-bold text-yellow-400">--</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-xs text-neutral-500 uppercase">Ao12</span>
-                    <span id="statAo12" class="text-xl font-bold text-purple-400">--</span>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- History -->
-    <div class="bg-neutral-900 border-t border-neutral-800 h-48 md:h-64 flex flex-col">
-        <div class="px-4 py-2 bg-neutral-800 flex justify-between items-center">
-            <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider">历史记录</span>
-        </div>
-        <div class="flex-1 overflow-y-auto no-scrollbar p-2">
-            <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2"></div>
-        </div>
-    </div>
-
-    <!-- Help Modal -->
-    <div id="helpModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center backdrop-blur-sm" onclick="toggleHelp()">
-        <div class="bg-neutral-800 p-6 rounded-xl max-w-sm w-full mx-4 border border-neutral-700 shadow-2xl" onclick="event.stopPropagation()">
-            <h2 class="text-xl font-bold mb-4 text-white">使用说明</h2>
-            <ul class="space-y-3 text-neutral-300 text-sm">
-                <li><b>电脑：</b>按住空格直至变绿，松开开始。</li>
-                <li><b>手机：</b>长按屏幕直至变绿，松开开始。</li>
-                <li><b>离线使用：</b>点击右上角“安装应用”即可。</li>
-            </ul>
-            <button onclick="toggleHelp()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium">确定</button>
-        </div>
-    </div>
-
+    <!-- 关键优化 2: 核心打乱逻辑移至 DOM 之前，确保它是最先解析的 JS -->
     <script>
-        /** * 优化说明：
-         * 为了解决 GitHub 加载慢导致的打乱公式不显示，我们将初始化逻辑
-         * 提升到脚本最顶层，不等待任何外部资源（如图片或字体）。
-         */
-
-        // --- Core Variables ---
-        let startTime = 0;
-        let timerInterval = null;
-        let state = 'IDLE'; 
-        let solves = [];
-        let currentScramble = "";
-        let holdingTimeout = null;
-
-        // --- Scramble Generator ---
+        // 立即执行函数：生成打乱公式
+        window.currentScramble = "";
         function generateScramble() {
             const moves = ["U", "D", "L", "R", "F", "B"];
             const modifiers = ["", "'", "2"];
@@ -175,7 +74,11 @@
                 let move;
                 do {
                     move = moves[Math.floor(Math.random() * moves.length)];
-                } while (move === lastMove || (move === secondLastMove && isOpposite(move, lastMove)));
+                } while (move === lastMove || (move === secondLastMove && (
+                    (move === 'U' && lastMove === 'D') || (move === 'D' && lastMove === 'U') ||
+                    (move === 'L' && lastMove === 'R') || (move === 'R' && lastMove === 'L') ||
+                    (move === 'F' && lastMove === 'B') || (move === 'B' && lastMove === 'F')
+                )));
                 let modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
                 scramble.push(move + modifier);
                 secondLastMove = lastMove;
@@ -184,33 +87,96 @@
             return scramble.join(" ");
         }
 
-        function isOpposite(m1, m2) {
-            const pairs = { 'U': 'D', 'D': 'U', 'L': 'R', 'R': 'L', 'F': 'B', 'B': 'F' };
-            return pairs[m1] === m2;
+        function forceRenderScramble() {
+            const display = document.getElementById('scrambleDisplay');
+            if (display) {
+                window.currentScramble = generateScramble();
+                display.innerText = window.currentScramble;
+                console.log("Scramble generated successfully");
+            }
         }
+
+        // 轮询检查 DOM，直到成功渲染
+        const initInterval = setInterval(() => {
+            if (document.getElementById('scrambleDisplay')) {
+                forceRenderScramble();
+                clearInterval(initInterval);
+            }
+        }, 10);
+    </script>
+
+    <!-- Navbar -->
+    <header class="flex justify-between items-center px-6 py-4 bg-neutral-900 border-b border-neutral-800">
+        <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-wide">CubeTimer</h1>
+        </div>
+        <div class="flex gap-4 items-center">
+            <button id="installBtn" onclick="installApp()" class="hidden bg-blue-600 text-white text-xs font-bold py-1.5 px-3 rounded-full">安装应用</button>
+            <button onclick="clearHistory()" class="text-neutral-400 hover:text-red-400"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative" id="touchArea">
+        <div class="pt-8 px-4 text-center z-10">
+            <div class="text-sm text-neutral-500 mb-2 font-bold uppercase tracking-widest">打乱公式 (Scramble)</div>
+            <!-- 这里就是打乱显示区域 -->
+            <div id="scrambleDisplay" class="scramble-text text-xl md:text-3xl font-medium text-neutral-400 max-w-4xl mx-auto cursor-pointer hover:text-white transition" onclick="newScramble()">
+                Loading...
+            </div>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center flex-col z-10">
+            <div id="timerDisplay" class="timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle">
+                0.00
+            </div>
+        </div>
+
+        <div class="w-full bg-neutral-900/80 border-t border-neutral-800 p-4 z-20">
+            <div class="max-w-4xl mx-auto grid grid-cols-4 gap-4 text-center">
+                <div class="flex flex-col">
+                    <span class="text-xs text-neutral-500">次数</span>
+                    <span id="statCount" class="text-xl font-bold">0</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs text-neutral-500">最快</span>
+                    <span id="statBest" class="text-xl font-bold text-blue-400">--</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs text-neutral-500">Ao5</span>
+                    <span id="statAo5" class="text-xl font-bold text-yellow-400">--</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs text-neutral-500">Ao12</span>
+                    <span id="statAo12" class="text-xl font-bold text-purple-400">--</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- History -->
+    <div class="bg-neutral-900 border-t border-neutral-800 h-48 md:h-64 flex flex-col">
+        <div class="px-4 py-2 bg-neutral-800"><span class="text-xs font-bold text-neutral-400">历史记录</span></div>
+        <div id="historyList" class="flex-1 overflow-y-auto p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2"></div>
+    </div>
+
+    <script>
+        // 计时器核心变量
+        let startTime = 0;
+        let timerInterval = null;
+        let state = 'IDLE'; 
+        let solves = [];
+        let holdingTimeout = null;
+
+        const timerDisplay = document.getElementById('timerDisplay');
 
         function newScramble() {
             if(state === 'RUNNING') return;
-            currentScramble = generateScramble();
-            const display = document.getElementById('scrambleDisplay');
-            if(display) display.innerText = currentScramble;
+            window.currentScramble = generateScramble();
+            document.getElementById('scrambleDisplay').innerText = window.currentScramble;
         }
 
-        // --- 强制立即执行初始化 ---
-        // 即使 HTML 还没完全解析完，只要 script 标签之后的 DOM 存在就执行
-        (function forceInit() {
-            const checkExist = setInterval(() => {
-                const display = document.getElementById('scrambleDisplay');
-                if (display) {
-                    newScramble();
-                    clearInterval(checkExist);
-                }
-            }, 10);
-            // 5秒后停止尝试，防止死循环
-            setTimeout(() => clearInterval(checkExist), 5000);
-        })();
-
-        // --- Timer Functions ---
+        // --- Timer Logic ---
         function formatTime(ms) {
             let seconds = Math.floor(ms / 1000);
             let milliseconds = Math.floor((ms % 1000) / 10);
@@ -218,16 +184,13 @@
         }
 
         function updateTimerDisplay() {
-            const timerDisplay = document.getElementById('timerDisplay');
-            if(timerDisplay) timerDisplay.innerText = formatTime(Date.now() - startTime);
+            timerDisplay.innerText = formatTime(Date.now() - startTime);
         }
 
         function startTimer() {
             state = 'RUNNING';
             startTime = Date.now();
-            const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-running';
-            document.getElementById('instructionText').style.opacity = '0';
+            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-running';
             document.getElementById('scrambleDisplay').style.opacity = '0';
             timerInterval = setInterval(updateTimerDisplay, 10);
         }
@@ -236,45 +199,40 @@
             clearInterval(timerInterval);
             const finalTime = Date.now() - startTime;
             state = 'IDLE';
-            const timerDisplay = document.getElementById('timerDisplay');
             timerDisplay.innerText = formatTime(finalTime);
-            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-idle';
-            document.getElementById('instructionText').style.opacity = '1';
+            timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle';
             document.getElementById('scrambleDisplay').style.opacity = '1';
             saveSolve(finalTime);
             newScramble();
         }
 
-        // --- Input Logic ---
+        // --- Interaction ---
         function handleInputDown() {
             if (state === 'RUNNING') { stopTimer(); return; }
             if (state === 'IDLE') {
                 state = 'HOLDING';
-                const timerDisplay = document.getElementById('timerDisplay');
-                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-holding';
-                timerDisplay.innerText = '0.00';
+                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-holding';
                 holdingTimeout = setTimeout(() => {
                     if (state === 'HOLDING') {
                         state = 'READY';
-                        timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-ready';
+                        timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-ready';
                     }
                 }, 300);
             }
         }
 
         function handleInputUp() {
-            if (state === 'READY') { startTimer(); }
+            if (state === 'READY') startTimer();
             else if (state === 'HOLDING') {
                 clearTimeout(holdingTimeout);
                 state = 'IDLE';
-                const timerDisplay = document.getElementById('timerDisplay');
-                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none transition-colors duration-100 timer-idle';
+                timerDisplay.className = 'timer-font text-[20vw] md:text-[12rem] font-bold leading-none timer-idle';
             }
         }
 
-        // --- Storage & Stats ---
+        // --- Storage ---
         function saveSolve(timeMs) {
-            const solve = { id: Date.now(), time: timeMs, scramble: currentScramble };
+            const solve = { id: Date.now(), time: timeMs, scramble: window.currentScramble };
             solves.unshift(solve);
             localStorage.setItem('cubeSolves', JSON.stringify(solves));
             renderHistory();
@@ -284,7 +242,7 @@
         function updateStats() {
             document.getElementById('statCount').innerText = solves.length;
             if (solves.length > 0) {
-                const best = Math.min(...solves.map(s => s.time));
+                const best = Math.min(...solves.map( => .time));
                 document.getElementById('statBest').innerText = formatTime(best);
             }
             document.getElementById('statAo5').innerText = calculateAoN(5);
@@ -293,7 +251,7 @@
 
         function calculateAoN(n) {
             if (solves.length < n) return '--';
-            const recent = solves.slice(0, n).map(s => s.time).sort((a,b) => a-b);
+            const recent = solves.slice(0, n).map( => .time).sort((a,b) => a-b);
             let sum = 0;
             for(let i=1; i<n-1; i++) sum += recent[i];
             return formatTime(sum / (n-2));
@@ -303,16 +261,16 @@
             const list = document.getElementById('historyList');
             if(!list) return;
             list.innerHTML = '';
-            solves.slice(0, 20).forEach(s => {
+            solves.slice(0, 10).forEach( => {
                 const div = document.createElement('div');
-                div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700";
-                div.innerHTML = `<span class="font-mono font-bold text-white">${formatTime(s.time)}</span><span class="text-[10px] text-neutral-500 truncate w-20">${s.scramble}</span>`;
+                div.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-sm";
+                div.innerHTML = `<span class="font-bold">${formatTime(.time)}</span><span class="text-[10px] text-neutral-500 truncate w-24">${.scramble}</span>`;
                 list.appendChild(div);
             });
         }
 
         function clearHistory() {
-            if(confirm('清空所有记录？')) {
+            if(confirm('清空记录？')) {
                 solves = [];
                 localStorage.removeItem('cubeSolves');
                 renderHistory();
@@ -320,39 +278,21 @@
             }
         }
 
-        function toggleHelp() {
-            const modal = document.getElementById('helpModal');
-            modal.classList.toggle('hidden');
-        }
-
-        // --- Event Listeners ---
+        // --- Events ---
         document.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); handleInputDown(); } });
         document.addEventListener('keyup', (e) => { if(e.code === 'Space') handleInputUp(); });
         
-        // Touch events need to wait for DOM to bind
         document.addEventListener('DOMContentLoaded', () => {
             const touchArea = document.getElementById('touchArea');
-            if(touchArea) {
-                touchArea.addEventListener('touchstart', (e) => { 
-                    if(!e.target.closest('button')) { 
-                        e.preventDefault(); 
-                        handleInputDown(); 
-                    } 
-                }, {passive: false});
-                touchArea.addEventListener('touchend', (e) => { 
-                    if(!e.target.closest('button')) { 
-                        e.preventDefault(); 
-                        handleInputUp(); 
-                    } 
-                });
-            }
+            touchArea.addEventListener('touchstart', (e) => { if(!e.target.closest('button')) { e.preventDefault(); handleInputDown(); } }, {passive: false});
+            touchArea.addEventListener('touchend', (e) => { if(!e.target.closest('button')) handleInputUp(); });
 
             const data = localStorage.getItem('cubeSolves');
             if(data) solves = JSON.parse(data);
             renderHistory();
             updateStats();
             
-            // PWA Manifest Init
+            // Generate PWA Manifest
             const manifest = {
                 "name": "极速魔方计时器",
                 "short_name": "CubeTimer",
@@ -363,27 +303,8 @@
                 "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/566/566300.png", "sizes": "512x512", "type": "image/png"}]
             };
             const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-            const manifestPlaceholder = document.querySelector('#manifest-placeholder');
-            if(manifestPlaceholder) manifestPlaceholder.setAttribute('href', 网站.createObjectURL(blob));
+            document.querySelector('#manifest-placeholder').setAttribute('href', 网站.createObjectURL(blob));
         });
-
-        // PWA Install
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const installBtn = document.getElementById('installBtn');
-            if(installBtn) installBtn.classList.remove('hidden');
-        });
-
-        async function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt = null;
-                const installBtn = document.getElementById('installBtn');
-                if(installBtn) installBtn.classList.add('hidden');
-            }
-        }
     </script>
 </body>
 </html>
