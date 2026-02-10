@@ -3,24 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- PWA Theme Color -->
     <meta name="theme-color" content="#171717">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
     <title>极速魔方计时器 | SpeedCube Timer</title>
 
-    <!-- Web App Manifest -->
+    <!-- 优化1: 预连接字体服务器 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Web App Manifest Placeholder -->
     <link rel="manifest" id="manifest-placeholder">
 
-    <!-- CSS / Fonts -->
+    <!-- 优化2: 异步加载外部 CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <script src="https://cdn.tailwindcss.com" async></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
         body {
-            font-family: 'Montserrat', sans-serif;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #1a1a1a;
             color: #e5e5e5;
             margin: 0;
@@ -64,7 +68,6 @@
 
         /* SVG Styles */
         .cube-face { stroke: #000; stroke-width: 1px; }
-        /* WCA Colors */
         .c-w { fill: #ffffff; }
         .c-y { fill: #ffd500; }
         .c-g { fill: #009e60; }
@@ -81,43 +84,52 @@
             -webkit-appearance: none;
             appearance: none;
         }
+        
+        #visualizer svg {
+            max-width: 100%;
+            height: 100%;
+            display: block;
+        }
 
-        /* Splash Screen Animation */
-        .fade-out {
+        /* 启动页样式 */
+        #splashScreen {
+            transition: opacity 0.5 ease-out, visibility 0.5 ease-out;
+        }
+        .splash-hidden {
             opacity: 0;
+            visibility: hidden;
             pointer-events: none;
         }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- Startup Splash Screen -->
-    <div id="splashScreen" class="fixed inset-0 z-50 bg-[#1a1a1a] flex flex-col items-center justify-center transition-opacity duration-500 ease-out">
-        <div class="animate-bounce mb-6">
-            <svg class="w-20 h-20 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 启动页 (Splash Screen) -->
+    <div id="splashScreen" class="fixed inset-0 z-50 bg-[#1a1a1a] flex flex-col items-center justify-center cursor-pointer">
+        <div class="mb-8 animate-bounce">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
             </svg>
         </div>
-        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tighter text-white mb-10" style="font-family: 'Montserrat', sans-serif;">
+        <h1 class="text-5xl font-black tracking-tighter text-white mb-10" style="font-family: 'Montserrat', sans-serif;">
             CUBE<span class="text-blue-500">TIMER</span>
         </h1>
-        <div class="animate-pulse flex flex-col items-center gap-2">
-            <p class="text-neutral-400 text-sm md:text-lg tracking-[0.2em] uppercase font-bold text-center px-4">
+        <div class="text-center px-4">
+            <p class="text-neutral-300 text-lg md:text-xl font-bold tracking-[0.15em] uppercase mb-3 animate-pulse">
                 按下空格或长按屏幕开始计时
             </p>
-            <p class="text-neutral-600 text-[10px] md:text-xs tracking-widest uppercase mt-2">
-                Press Space or Hold Screen to Start
+            <p class="text-neutral-500 text-xs md:text-sm tracking-widest uppercase">
+                Tap anywhere to enter
             </p>
         </div>
     </div>
 
-    <!-- Navbar with GAN-style Logo -->
+    <!-- Header -->
     <header class="flex justify-between items-center px-4 md:px-6 py-3 bg-neutral-900 border-b border-neutral-800 shrink-0 z-30">
         <div class="flex items-center gap-2">
-            <!-- New Minimalist Logo Icon -->
-            <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
@@ -126,7 +138,7 @@
                 <h1 class="text-xl font-extrabold tracking-tighter text-white leading-none" style="font-family: 'Montserrat', sans-serif;">
                     CUBE<span class="text-blue-500">TIMER</span>
                 </h1>
-                <span class="text-[0.5rem] tracking-[0.2em] text-neutral-500 uppercase font-bold">Professional</span>
+                <span class="text-[0.5rem] tracking-[0.2em] text-neutral-500 uppercase font-bold">Pro Edition</span>
             </div>
         </div>
         <div class="flex gap-3 items-center">
@@ -157,8 +169,7 @@
             </div>
 
             <!-- Scramble Visualization (SVG) -->
-            <!-- 增加至 200px (md) / 160px (mobile) -->
-            <div id="visualizer" class="w-full flex justify-center h-[160px] md:h-[200px] transition-opacity duration-300 opacity-0">
+            <div id="visualizer" class="w-full flex justify-center items-center h-[160px] md:h-[200px] transition-opacity duration-300 opacity-0">
                 <!-- SVG injected by JS -->
             </div>
         </div>
@@ -168,7 +179,6 @@
             <div id="timerDisplay" class="timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-idle select-none transition-colors duration-100">
                 0.00
             </div>
-            <!-- Instruction text -->
             <div id="instruction" class="mt-2 md:mt-4 text-neutral-600 text-[10px] md:text-xs uppercase tracking-wider text-center opacity-60">
                 <span class="hidden md:block">Press Space to Start</span>
                 <span class="md:hidden">Hold Screen to Start</span>
@@ -196,19 +206,6 @@
 
     <!-- Scripts -->
     <script>
-        // --- Splash Screen Logic ---
-        function dismissSplash() {
-            const splash = document.getElementById('splashScreen');
-            if (splash && !splash.classList.contains('fade-out')) {
-                splash.classList.add('fade-out');
-                setTimeout(() => {
-                    if(splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 500);
-                return true; // 成功消除 Splash
-            }
-            return false; // Splash 已经不存在或正在消除
-        }
-
         // --- 1. 魔方逻辑引擎 (Cube Engine) ---
         const COLORS = { U: 'c-w', R: 'c-r', F: 'c-g', D: 'c-y', L: 'c-o', B: 'c-b' };
         
@@ -231,12 +228,12 @@
         };
 
         const MOVES_222 = {
-            'U': () => cycleFace(, 'U', [0,1,3,2]) & cycleSides(, ['F', 'L', 'B', 'R'], [[0,1], [0,1], [0,1], [0,1]]),
-            'D': () => cycleFace(, 'D', [0,1,3,2]) & cycleSides(, ['F', 'R', 'B', 'L'], [[2,3], [2,3], [2,3], [2,3]]),
-            'F': () => cycleFace(, 'F', [0,1,3,2]) & cycleSides(, ['U', 'R', 'D', 'L'], [[2,3], [0,2], [1,0], [3,1]]),
-            'B': () => cycleFace(, 'B', [0,1,3,2]) & cycleSides(, ['U', 'L', 'D', 'R'], [[1,0], [0,2], [2,3], [3,1]]),
-            'L': () => cycleFace(, 'L', [0,1,3,2]) & cycleSides(, ['U', 'F', 'D', 'B'], [[0,2], [0,2], [0,2], [3,1]]),
-            'R': () => cycleFace(, 'R', [0,1,3,2]) & cycleSides(, ['U', 'B', 'D', 'F'], [[1,3], [2,0], [1,3], [1,3]]),
+            'U': (s) => cycleFace(s, 'U', [0,1,3,2]) & cycleSides(s, ['F', 'L', 'B', 'R'], [[0,1], [0,1], [0,1], [0,1]]),
+            'D': (s) => cycleFace(s, 'D', [0,1,3,2]) & cycleSides(s, ['F', 'R', 'B', 'L'], [[2,3], [2,3], [2,3], [2,3]]),
+            'F': (s) => cycleFace(s, 'F', [0,1,3,2]) & cycleSides(s, ['U', 'R', 'D', 'L'], [[2,3], [0,2], [1,0], [3,1]]),
+            'B': (s) => cycleFace(s, 'B', [0,1,3,2]) & cycleSides(s, ['U', 'L', 'D', 'R'], [[1,0], [0,2], [2,3], [3,1]]),
+            'L': (s) => cycleFace(s, 'L', [0,1,3,2]) & cycleSides(s, ['U', 'F', 'D', 'B'], [[0,2], [0,2], [0,2], [3,1]]),
+            'R': (s) => cycleFace(s, 'R', [0,1,3,2]) & cycleSides(s, ['U', 'B', 'D', 'F'], [[1,3], [2,0], [1,3], [1,3]]),
         };
 
         function cycleFace(state, face, indices) {
@@ -287,7 +284,9 @@
                 B: [(faceSize + gap) * 3, faceSize + gap],
                 D: [faceSize + gap, (faceSize + gap) * 2]
             };
-            let svgHTML = `<svg width="100%" height="100%" viewBox="0 0 ${faceSize*4 + gap*3} ${faceSize*3 + gap*2}">`;
+            
+            // 使用 viewBox 自适应容器大小
+            let svgHTML = `<svg viewBox="0 0 ${faceSize*4 + gap*3} ${faceSize*3 + gap*2}" class="h-full w-auto">`;
             ['U', 'L', 'F', 'R', 'B', 'D'].forEach(face => {
                 const [ox, oy] = offsets[face];
                 state[face].forEach((colorClass, idx) => {
@@ -316,7 +315,7 @@
         const elSelect = document.getElementById('puzzleType');
         const elInstruction = document.getElementById('instruction');
 
-        // --- 修复关键：立即执行初始化 ---
+        // --- 极速初始化 ---
         (function initImmediately() {
             const interval = setInterval(() => {
                 const display = document.getElementById('scrambleDisplay');
@@ -325,7 +324,7 @@
                     newScramble();
                     clearInterval(interval);
                 }
-            }, 50);
+            }, 10);
             setTimeout(() => clearInterval(interval), 5000);
         })();
 
@@ -411,9 +410,9 @@
         function updateTimer() {
             const now = Date.now();
             const diff = now - timerStart;
-            let  = Math.floor(diff / 1000);
+            let s = Math.floor(diff / 1000);
             let ms = Math.floor((diff % 1000) / 10);
-            elTimer.innerText = `${}.${ms.toString().padStart(2, '0')}`;
+            elTimer.innerText = `${s}.${ms.toString().padStart(2, '0')}`;
         }
 
         function startTimer() {
@@ -448,8 +447,21 @@
 
         // --- 4. 交互 (Touch/Keyboard) ---
         
+        // 关键改良：分离启动页逻辑与计时器逻辑
+        function dismissSplash() {
+            const splash = document.getElementById('splashScreen');
+            if (splash && !splash.classList.contains('splash-hidden')) {
+                splash.classList.add('splash-hidden');
+                setTimeout(() => {
+                    if (splash.parentNode) splash.parentNode.removeChild(splash);
+                }, 500); // Wait for transition
+                return true; // 表示刚刚处理了启动页
+            }
+            return false; // 没有处理启动页，可以进行正常操作
+        }
+
         function handleDown() {
-            // 如果成功消除了 Splash，直接返回，不进入 IDLE -> HOLDING 逻辑
+            // 如果启动页存在，优先消除它，并阻止进入准备状态
             if (dismissSplash()) {
                 return;
             }
@@ -473,11 +485,10 @@
         }
 
         function handleUp() {
-            // 如果 Splash 刚刚被消除（或者还在消除中），直接忽略抬起动作
-            if (dismissSplash()) {
-                return;
-            }
-
+            // 如果刚才是在消除启动页，什么都不做
+            // 这里不需要像 handleDown 那样调用 dismissSplash，因为 down 已经触发了
+            // 但如果用户直接是 click (up)，可能需要防抖？通常 down 先触发。
+            
             if (appState === 'READY') {
                 startTimer();
             } else if (appState === 'HOLDING') {
@@ -498,10 +509,15 @@
         });
 
         const touchArea = document.getElementById('touchArea');
-        // 全局点击也可以消除 Splash，但为了逻辑统一，我们在 touchstart 处理
-        document.addEventListener('touchstart', (e) => {
-             // 如果在 Splash 上点击，消除它
-             if(document.getElementById('splashScreen')) dismissSplash();
+        
+        // 任何地方点击都能消除 Splash
+        document.getElementById('splashScreen').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDown(); // 这会调用 dismissSplash 并返回
+        });
+        document.getElementById('splashScreen').addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            handleDown();
         });
 
         touchArea.addEventListener('touchstart', e => {
@@ -597,17 +613,24 @@
 
         // --- PWA ---
         function setupPWA() {
-            const m = {
-                name: "CubeTimer Pro",
-                short_name: "CubeTimer",
-                display: "standalone",
-                start_url: ".",
-                background_color: "#1a1a1a",
-                theme_color: "#1a1a1a",
-                icons: [{ src: "https://cdn-icons-png.flaticon.com/512/566/566300.png", sizes: "512x512", type: "image/png" }]
-            };
-            const b = new Blob([JSON.stringify(m)], {type: 'application/json'});
-            document.getElementById('manifest-placeholder').href = 网站.createObjectURL(b);
+            try {
+                const m = {
+                    name: "CubeTimer Pro",
+                    short_name: "CubeTimer",
+                    display: "standalone",
+                    start_url: ".",
+                    background_color: "#1a1a1a",
+                    theme_color: "#1a1a1a",
+                    icons: [{ src: "https://cdn-icons-png.flaticon.com/512/566/566300.png", sizes: "512x512", type: "image/png" }]
+                };
+                const b = new Blob([JSON.stringify(m)], {type: 'application/json'});
+                const linkEl = document.getElementById('manifest-placeholder');
+                if (linkEl) {
+                    linkEl.href = 网站.createObjectURL(b);
+                }
+            } catch (e) {
+                console.warn("PWA setup failed, potentially due to restricted environment:", e);
+            }
         }
         
         let prompt;
