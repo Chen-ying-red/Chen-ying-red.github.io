@@ -560,22 +560,22 @@
             const list = document.getElementById('historyList');
             if(!list) return;
             list.innerHTML = '';
-            const filtered = solves.filter(s => s.type === currentPuzzle);
+            const filtered = solves.filter( => .type === currentPuzzle);
             
-            filtered.slice(0, 50).forEach((s, i) => {
+            filtered.slice(0, 50).forEach((, i) => {
                 const el = document.createElement('div');
                 el.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-xs";
                 
-                let timeStr = (s.time / 1000).toFixed(2);
-                let tagColor = s.type === '333' ? 'text-blue-400' : (s.type === '222' ? 'text-yellow-400' : 'text-purple-400');
+                let timeStr = (.time / 1000).toFixed(2);
+                let tagColor = .type === '333' ? 'text-blue-400' : (.type === '222' ? 'text-yellow-400' : 'text-purple-400');
                 
                 el.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-neutral-500 w-4">${filtered.length - i}</span>
-                        <span class="font-bold text-[10px] ${tagColor} border border-neutral-600 px-1 rounded">${s.type}</span>
+                        <span class="font-bold text-[10px] ${tagColor} border border-neutral-600 px-1 rounded">${.type}</span>
                         <span class="font-bold text-white text-sm">${timeStr}</span>
                     </div>
-                    <button onclick="delSolve(${s.id})" class="text-neutral-600 hover:text-red-400 px-2"><i class="fas fa-times"></i></button>
+                    <button onclick="delSolve(${.id})" class="text-neutral-600 hover:text-red-400 px-2"><i class="fas fa-times"></i></button>
                 `;
                 list.appendChild(el);
             });
