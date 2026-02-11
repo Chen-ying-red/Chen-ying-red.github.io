@@ -19,8 +19,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 关键修复：添加 async 属性，防止 Tailwind 加载慢导致白屏或脚本阻塞 -->
+    <script src="https://cdn.tailwindcss.com" async></script>
     
     <style>
         body {
@@ -93,7 +93,7 @@
 
         /* 启动页样式 */
         #splashScreen {
-            transition: opacity 0.5 ease-out, visibility 0.5 ease-out;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
         }
         .splash-hidden {
             opacity: 0;
@@ -105,7 +105,8 @@
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- 启动页 (Splash Screen) -->
-    <div id="splashScreen" class="fixed inset-0 z-50 bg-[#1a1a1a] flex flex-col items-center justify-center cursor-pointer">
+    <!-- 关键修复：添加 onclick 属性直接处理点击，双重保险 -->
+    <div id="splashScreen" onclick="dismissSplash()" class="fixed inset-0 z-50 bg-[#1a1a1a] flex flex-col items-center justify-center cursor-pointer">
         <div class="mb-8 animate-bounce">
             <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -219,12 +220,12 @@
         }
 
         const MOVES_333 = {
-            'U': () => cycleFace(, 'U', [0,1,2,5,8,7,6,3]) & cycleSides(, ['F', 'L', 'B', 'R'], [[0,1,2], [0,1,2], [0,1,2], [0,1,2]]),
-            'D': () => cycleFace(, 'D', [0,1,2,5,8,7,6,3]) & cycleSides(, ['F', 'R', 'B', 'L'], [[6,7,8], [6,7,8], [6,7,8], [6,7,8]]),
-            'F': () => cycleFace(, 'F', [0,1,2,5,8,7,6,3]) & cycleSides(, ['U', 'R', 'D', 'L'], [[6,7,8], [0,3,6], [2,1,0], [8,5,2]]),
-            'B': () => cycleFace(, 'B', [0,1,2,5,8,7,6,3]) & cycleSides(, ['U', 'L', 'D', 'R'], [[2,1,0], [0,3,6], [6,7,8], [8,5,2]]),
-            'L': () => cycleFace(, 'L', [0,1,2,5,8,7,6,3]) & cycleSides(, ['U', 'F', 'D', 'B'], [[0,3,6], [0,3,6], [0,3,6], [8,5,2]]),
-            'R': () => cycleFace(, 'R', [0,1,2,5,8,7,6,3]) & cycleSides(, ['U', 'B', 'D', 'F'], [[8,5,2], [0,3,6], [8,5,2], [8,5,2]]),
+            'U': (s) => cycleFace(s, 'U', [0,1,2,5,8,7,6,3]) & cycleSides(s, ['F', 'L', 'B', 'R'], [[0,1,2], [0,1,2], [0,1,2], [0,1,2]]),
+            'D': (s) => cycleFace(s, 'D', [0,1,2,5,8,7,6,3]) & cycleSides(s, ['F', 'R', 'B', 'L'], [[6,7,8], [6,7,8], [6,7,8], [6,7,8]]),
+            'F': (s) => cycleFace(s, 'F', [0,1,2,5,8,7,6,3]) & cycleSides(s, ['U', 'R', 'D', 'L'], [[6,7,8], [0,3,6], [2,1,0], [8,5,2]]),
+            'B': (s) => cycleFace(s, 'B', [0,1,2,5,8,7,6,3]) & cycleSides(s, ['U', 'L', 'D', 'R'], [[2,1,0], [0,3,6], [6,7,8], [8,5,2]]),
+            'L': (s) => cycleFace(s, 'L', [0,1,2,5,8,7,6,3]) & cycleSides(s, ['U', 'F', 'D', 'B'], [[0,3,6], [0,3,6], [0,3,6], [8,5,2]]),
+            'R': (s) => cycleFace(s, 'R', [0,1,2,5,8,7,6,3]) & cycleSides(s, ['U', 'B', 'D', 'F'], [[8,5,2], [0,3,6], [8,5,2], [8,5,2]]),
         };
 
         const MOVES_222 = {
@@ -321,7 +322,9 @@
                 const display = document.getElementById('scrambleDisplay');
                 const viz = document.getElementById('visualizer');
                 if (display && viz) {
-                    newScramble();
+                    try {
+                        newScramble();
+                    } catch(e) { console.error("Init scramble failed", e); }
                     clearInterval(interval);
                 }
             }, 10);
@@ -329,9 +332,13 @@
         })();
 
         window.addEventListener('DOMContentLoaded', () => {
-            loadHistory();
-            if (!currentScrambleStr) newScramble();
-            setupPWA();
+            try {
+                loadHistory();
+                if (!currentScrambleStr) newScramble();
+                setupPWA();
+            } catch(e) {
+                console.warn("Setup error", e);
+            }
         });
 
         function changePuzzleType() {
@@ -432,9 +439,9 @@
             const finalTime = Date.now() - timerStart;
             appState = 'IDLE';
             
-            let  = Math.floor(finalTime / 1000);
+            let s = Math.floor(finalTime / 1000);
             let ms = Math.floor((finalTime % 1000) / 10);
-            elTimer.innerText = `${}.${ms.toString().padStart(2, '0')}`;
+            elTimer.innerText = `${s}.${ms.toString().padStart(2, '0')}`;
             elTimer.className = 'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-idle';
 
             elInstruction.style.opacity = '0.6';
@@ -486,9 +493,8 @@
 
         function handleUp() {
             // 如果刚才是在消除启动页，什么都不做
-            // 这里不需要像 handleDown 那样调用 dismissSplash，因为 down 已经触发了
-            // 但如果用户直接是 click (up)，可能需要防抖？通常 down 先触发。
-            
+            if (dismissSplash()) return;
+
             if (appState === 'READY') {
                 startTimer();
             } else if (appState === 'HOLDING') {
@@ -510,15 +516,16 @@
 
         const touchArea = document.getElementById('touchArea');
         
-        // 任何地方点击都能消除 Splash
-        document.getElementById('splashScreen').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleDown(); // 这会调用 dismissSplash 并返回
-        });
-        document.getElementById('splashScreen').addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            handleDown();
-        });
+        // 双重保险：任何地方点击都能消除 Splash
+        const splashEl = document.getElementById('splashScreen');
+        if(splashEl) {
+            ['touchstart', 'mousedown'].forEach(evt => 
+                splashEl.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dismissSplash();
+                })
+            );
+        }
 
         touchArea.addEventListener('touchstart', e => {
             if (!e.target.closest('button') && !e.target.closest('select') && !e.target.closest('.scramble-text')) {
@@ -535,8 +542,8 @@
         // --- 5. 历史与统计 ---
         
         function saveSolve(ms) {
-            const  = { id: Date.now(), time: ms, type: currentPuzzle, scramble: currentScrambleStr };
-            solves.unshift();
+            const s = { id: Date.now(), time: ms, type: currentPuzzle, scramble: currentScrambleStr };
+            solves.unshift(s);
             localStorage.setItem('cubeSolvesV2', JSON.stringify(solves));
             renderHistory();
             updateStats();
@@ -551,23 +558,24 @@
 
         function renderHistory() {
             const list = document.getElementById('historyList');
+            if(!list) return;
             list.innerHTML = '';
-            const filtered = solves.filter( => .type === currentPuzzle);
+            const filtered = solves.filter(s => s.type === currentPuzzle);
             
-            filtered.slice(0, 50).forEach((, i) => {
+            filtered.slice(0, 50).forEach((s, i) => {
                 const el = document.createElement('div');
                 el.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-xs";
                 
-                let timeStr = (.time / 1000).toFixed(2);
-                let tagColor = .type === '333' ? 'text-blue-400' : (.type === '222' ? 'text-yellow-400' : 'text-purple-400');
+                let timeStr = (s.time / 1000).toFixed(2);
+                let tagColor = s.type === '333' ? 'text-blue-400' : (s.type === '222' ? 'text-yellow-400' : 'text-purple-400');
                 
                 el.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-neutral-500 w-4">${filtered.length - i}</span>
-                        <span class="font-bold text-[10px] ${tagColor} border border-neutral-600 px-1 rounded">${.type}</span>
+                        <span class="font-bold text-[10px] ${tagColor} border border-neutral-600 px-1 rounded">${s.type}</span>
                         <span class="font-bold text-white text-sm">${timeStr}</span>
                     </div>
-                    <button onclick="delSolve(${.id})" class="text-neutral-600 hover:text-red-400 px-2"><i class="fas fa-times"></i></button>
+                    <button onclick="delSolve(${s.id})" class="text-neutral-600 hover:text-red-400 px-2"><i class="fas fa-times"></i></button>
                 `;
                 list.appendChild(el);
             });
@@ -591,7 +599,8 @@
 
         function updateStats() {
             const filtered = solves.filter( => .type === currentPuzzle);
-            document.getElementById('statCount').innerText = filtered.length;
+            const elCount = document.getElementById('statCount');
+            if(elCount) elCount.innerText = filtered.length;
             
             if (filtered.length > 0) {
                 const best = Math.min(...filtered.map( => .time));
