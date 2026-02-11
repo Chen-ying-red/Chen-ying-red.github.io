@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#171717">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>极速魔方计时器 | SpeedCube Timer</title>
+    <title>魔方计时器 | SpeedCube Timer</title>
 
     <!-- 优化1: 预连接字体服务器 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -118,7 +118,7 @@
         </h1>
         <div class="text-center px-4">
             <p class="text-neutral-300 text-lg md:text-xl font-bold tracking-[0.15em] uppercase mb-3 animate-pulse">
-                按下空格或长按屏幕开始计时
+                点击鼠标左键或长按屏幕开始计时
             </p>
             <p class="text-neutral-500 text-xs md:text-sm tracking-widest uppercase">
                 Tap anywhere to enter
@@ -329,6 +329,7 @@
         })();
 
         window.addEventListener('DOMContentLoaded', () => {
+            setupSplash();
             loadHistory();
             if (!currentScrambleStr) newScramble();
             setupPWA();
@@ -446,44 +447,30 @@
         }
 
         // --- 4. 交互 (Touch/Keyboard) ---
-        
-        // 关键改良：分离启动页逻辑与计时器逻辑
-        function dismissSplash() {
-            const splash = document.getElementById('splashScreen');
-            if (splash && !splash.classList.contains('splash-hidden')) {
-                splash.classList.add('splash-hidden');
-                setTimeout(() => {
-                    if (splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 500); // Wait for transition
-                return true; // 表示刚刚处理了启动页
-            }
-            return false; // 没有处理启动页，可以进行正常操作
-        }
 
         function handleDown() {
-            if (dismissSplash()) return;
-
             if (appState === 'RUNNING') {
                 stopTimer();
                 return;
             }
-
-            if (appState !== 'IDLE') return;
-
-            appState = 'HOLDING';
-            elTimer.innerText = "0.00";
-            elTimer.className =
-                'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-holding';
-
-            holdingTimeout = setTimeout(() => {
-                if (appState === 'HOLDING') {
-                    appState = 'READY';
-                    elTimer.className =
-                        'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-ready';
-                }
-            }, 550);
+            if (appState === 'IDLE') {
+                appState = 'HOLDING';
+                elTimer.className = 'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-holding';
+                elTimer.innerText = "0.00";
+                let readyAt = 0;
+                holdingTimeout = setTimeout(() => {
+                    if (appState === 'HOLDING') {
+                        appState = 'READY';
+                        readyAt = Date.now();
+                        elTimer.className = 'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-ready';
+                    }
+                    if (appState === 'READY') {
+                        if (Date.now() - readyAt < 20) return; // 防抖
+                        startTimer();
+                    }
+                }, 550); 
+            }
         }
-
 
         function handleUp() {
             if (appState === 'READY') {
@@ -512,13 +499,21 @@
 
         const touchArea = document.getElementById('touchArea');
         
-        // 任何地方点击都能消除 Splash
-        const splash = document.getElementById('splashScreen');
+        function setupSplash() {
+            const splash = document.getElementById('splashScreen');
+            if (!splash) return;
 
-        splash.addEventListener('pointerdown', (e) => {
-            dismissSplash();
-        }, { passive: true });
+            splash.addEventListener('pointerdown', () => {
+                splash.classList.add('splash-hidden');
 
+                // 等动画结束后彻底移除
+                setTimeout(() => {
+                    splash.remove();
+                }, 500);
+            }, { passive: true });
+        }
+
+        
 
         touchArea.addEventListener('touchstart', e => {
             if (!e.target.closest('button') && !e.target.closest('select') && !e.target.closest('.scramble-text')) {
@@ -575,7 +570,7 @@
 
         window.delSolve = function(id) {
             if(!confirm('Delete this solve?')) return;
-            solves = solves.filter( => .id !== id);
+            solves = solves.filter(s => s.id !== id);
             localStorage.setItem('cubeSolvesV2', JSON.stringify(solves));
             renderHistory();
             updateStats();
@@ -590,7 +585,7 @@
         };
 
         function updateStats() {
-            const filtered = solves.filter( => .type === currentPuzzle);
+            const filtered = solves.filter(s => s.type === currentPuzzle);
             document.getElementById('statCount').innerText = filtered.length;
             
             if (filtered.length > 0) {
