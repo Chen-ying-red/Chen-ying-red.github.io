@@ -19,8 +19,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     
-    <!-- 关键修复：添加 async 属性，防止 Tailwind 加载慢导致白屏或脚本阻塞 -->
-    <script src="https://cdn.tailwindcss.com" async></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
         body {
@@ -105,8 +105,7 @@
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- 启动页 (Splash Screen) -->
-    <!-- 关键修复：添加 onclick 属性直接处理点击，双重保险 -->
-    <div id="splashScreen" onclick="dismissSplash()" class="fixed inset-0 z-50 bg-[#1a1a1a] flex flex-col items-center justify-center cursor-pointer">
+    <div id="splashScreen" class="fixed inset-0 z-50 bg-[#1a1a1a] flex flex-col items-center justify-center cursor-pointer">
         <div class="mb-8 animate-bounce">
             <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -322,9 +321,7 @@
                 const display = document.getElementById('scrambleDisplay');
                 const viz = document.getElementById('visualizer');
                 if (display && viz) {
-                    try {
-                        newScramble();
-                    } catch(e) { console.error("Init scramble failed", e); }
+                    newScramble();
                     clearInterval(interval);
                 }
             }, 10);
@@ -332,13 +329,9 @@
         })();
 
         window.addEventListener('DOMContentLoaded', () => {
-            try {
-                loadHistory();
-                if (!currentScrambleStr) newScramble();
-                setupPWA();
-            } catch(e) {
-                console.warn("Setup error", e);
-            }
+            loadHistory();
+            if (!currentScrambleStr) newScramble();
+            setupPWA();
         });
 
         function changePuzzleType() {
@@ -468,39 +461,42 @@
         }
 
         function handleDown() {
-            // 如果启动页存在，优先消除它，并阻止进入准备状态
-            if (dismissSplash()) {
-                return;
-            }
+            if (dismissSplash()) return;
 
             if (appState === 'RUNNING') {
                 stopTimer();
                 return;
             }
-            if (appState === 'IDLE') {
-                appState = 'HOLDING';
-                elTimer.className = 'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-holding';
-                elTimer.innerText = "0.00";
-                
-                holdingTimeout = setTimeout(() => {
-                    if (appState === 'HOLDING') {
-                        appState = 'READY';
-                        elTimer.className = 'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-ready';
-                    }
-                }, 350); 
-            }
+
+            if (appState !== 'IDLE') return;
+
+            appState = 'HOLDING';
+            elTimer.innerText = "0.00";
+            elTimer.className =
+                'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-holding';
+
+            holdingTimeout = setTimeout(() => {
+                if (appState === 'HOLDING') {
+                    appState = 'READY';
+                    elTimer.className =
+                        'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-ready';
+                }
+            }, 550);
         }
 
-        function handleUp() {
-            // 如果刚才是在消除启动页，什么都不做
-            if (dismissSplash()) return;
 
+        function handleUp() {
             if (appState === 'READY') {
-                startTimer();
-            } else if (appState === 'HOLDING') {
+                startTimer(); // 只有绿灯才能启动
+                return;
+            }
+
+            if (appState === 'HOLDING') {
+                // 没到 0.55s，判定为失败
                 clearTimeout(holdingTimeout);
                 appState = 'IDLE';
-                elTimer.className = 'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-idle';
+                elTimer.className =
+                    'timer-font text-[24vw] md:text-[12rem] lg:text-[14rem] font-bold leading-none timer-idle';
             }
         }
 
@@ -516,16 +512,13 @@
 
         const touchArea = document.getElementById('touchArea');
         
-        // 双重保险：任何地方点击都能消除 Splash
-        const splashEl = document.getElementById('splashScreen');
-        if(splashEl) {
-            ['touchstart', 'mousedown'].forEach(evt => 
-                splashEl.addEventListener(evt, (e) => {
-                    e.preventDefault();
-                    dismissSplash();
-                })
-            );
-        }
+        // 任何地方点击都能消除 Splash
+        const splash = document.getElementById('splashScreen');
+
+        splash.addEventListener('pointerdown', (e) => {
+            dismissSplash();
+        }, { passive: true });
+
 
         touchArea.addEventListener('touchstart', e => {
             if (!e.target.closest('button') && !e.target.closest('select') && !e.target.closest('.scramble-text')) {
@@ -558,24 +551,23 @@
 
         function renderHistory() {
             const list = document.getElementById('historyList');
-            if(!list) return;
             list.innerHTML = '';
-            const filtered = solves.filter( => .type === currentPuzzle);
+            const filtered = solves.filter(s => s.type === currentPuzzle);
             
-            filtered.slice(0, 50).forEach((, i) => {
+            filtered.slice(0, 50).forEach((s, i) => {
                 const el = document.createElement('div');
                 el.className = "bg-neutral-800 rounded p-2 flex justify-between items-center border border-neutral-700 text-xs";
                 
-                let timeStr = (.time / 1000).toFixed(2);
-                let tagColor = .type === '333' ? 'text-blue-400' : (.type === '222' ? 'text-yellow-400' : 'text-purple-400');
+                let timeStr = (s.time / 1000).toFixed(2);
+                let tagColor = s.type === '333' ? 'text-blue-400' : (s.type === '222' ? 'text-yellow-400' : 'text-purple-400');
                 
                 el.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-neutral-500 w-4">${filtered.length - i}</span>
-                        <span class="font-bold text-[10px] ${tagColor} border border-neutral-600 px-1 rounded">${.type}</span>
+                        <span class="font-bold text-[10px] ${tagColor} border border-neutral-600 px-1 rounded">${s.type}</span>
                         <span class="font-bold text-white text-sm">${timeStr}</span>
                     </div>
-                    <button onclick="delSolve(${.id})" class="text-neutral-600 hover:text-red-400 px-2"><i class="fas fa-times"></i></button>
+                    <button onclick="delSolve(${s.id})" class="text-neutral-600 hover:text-red-400 px-2"><i class="fas fa-times"></i></button>
                 `;
                 list.appendChild(el);
             });
@@ -599,8 +591,7 @@
 
         function updateStats() {
             const filtered = solves.filter( => .type === currentPuzzle);
-            const elCount = document.getElementById('statCount');
-            if(elCount) elCount.innerText = filtered.length;
+            document.getElementById('statCount').innerText = filtered.length;
             
             if (filtered.length > 0) {
                 const best = Math.min(...filtered.map( => .time));
